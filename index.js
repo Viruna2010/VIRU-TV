@@ -2,14 +2,14 @@ const { exec } = require('child_process');
 const express = require('express');
 const app = express();
 
-app.get('/', (req, res) => res.send('Viru TV: Live Stream Active! 🔴'));
+app.get('/', (req, res) => res.send('Viru TV: Cookies & A/B Logic Loaded! 🍪📡'));
 app.listen(process.env.PORT || 3000);
 
 const streamURL = "rtmp://a.rtmp.youtube.com/live2/";
 const streamKey = process.env.STREAM_KEY; 
+const accountType = process.env.ACCOUNT_TYPE; // 'A' or 'B' (Render Env එකෙන්)
 const logoPath = "https://i.ibb.co/jk3cgWMC/logo.png"; 
 
-// Garfield ගියාද කියලා බලන ස්විච් එක
 let isGarfieldDone = false;
 
 function getSource() {
@@ -27,38 +27,43 @@ function getSource() {
         return "https://www.youtube.com/@KDCartoons-dh4mr/videos"; // Channel
     }
     
-    // 18:00 - 19:00 : බණ (ලින්ක් එක දාන්න)
+    // 18:00 - 19:00 : බණ (බණ ලින්ක් එක නැතිනම් සින්දු එකම යයි)
     if (hour === 18) return "https://www.youtube.com/live/opd7CAQmtzM";
 
-    // Default: සින්දු
     return "https://www.youtube.com/live/opd7CAQmtzM"; 
 }
 
 const startStream = () => {
-    const source = getSource();
-    console.log(`Current Source: ${source}`);
+    // 1. මුලින්ම බලන්නේ එකවුන්ට් එක වැඩ කරන්න ඕන දවසද කියලා
+    const day = new Date().getDate();
+    
+    // දවස් 1-15: Account A විතරයි වැඩ. Account B නිදාගන්නවා.
+    // දවස් 16-31: Account B විතරයි වැඩ. Account A නිදාගන්නවා.
+    if ((day <= 15 && accountType !== 'A') || (day > 15 && accountType !== 'B')) {
+        console.log(`Account ${accountType} is on Standby Mode (Day: ${day})...`);
+        return setTimeout(startStream, 60000); // විනාඩියකින් ආයේ චෙක් කරනවා
+    }
 
-    // yt-dlp එකෙන් ලින්ක් එක ගන්න කමාන්ඩ් එක (Warnings අයින් කරලා, 360p Force කරලා)
-    // Channel එකක් නම් random වීඩියෝ එකක් ගන්නවා
+    // 2. ඊට පස්සේ වීඩියෝ එක තෝරගන්නවා
+    const source = getSource();
+    console.log(`Account ${accountType} Starting Source: ${source}`);
+
     let ytFlags = "-f 18 -g";
     if (source.includes("KDCartoons")) {
         ytFlags = "-f 18 -g --playlist-random --playlist-items 1-20";
     }
 
-    // මෙන්න වෙනස් කරපු තැන: ./ffmpeg (ඩොට් එක සහ ඉර ඇල ඉර) අනිවාර්යයි
-    const cmd = `yt-dlp ${ytFlags} "${source}" | head -n 1 | xargs -I {} ./ffmpeg -re -i {} -i ${logoPath} -filter_complex "[1:v]colorkey=0xFFFFFF:0.1:0.1[logo];[0:v][logo]overlay=W-w-10:10" -c:v libx264 -preset ultrafast -b:v 450k -maxrate 500k -bufsize 1000k -s 480x360 -c:a aac -b:a 96k -ar 44100 -f flv ${streamURL}${streamKey}`;
-    
-    console.log("Starting Stream Process...");
+    // 3. Cookies පාවිච්චි කරලා ස්ට්‍රීම් කරනවා
+    const cmd = `yt-dlp --cookies cookies.txt ${ytFlags} "${source}" | head -n 1 | xargs -I {} ./ffmpeg -re -i {} -i ${logoPath} -filter_complex "[1:v]colorkey=0xFFFFFF:0.1:0.1[logo];[0:v][logo]overlay=W-w-10:10" -c:v libx264 -preset ultrafast -b:v 450k -maxrate 500k -bufsize 1000k -s 480x360 -c:a aac -b:a 96k -ar 44100 -f flv ${streamURL}${streamKey}`;
     
     const proc = exec(cmd);
 
-    // ලොග් බලාගන්න (ඇත්තටම මොකද වෙන්නේ කියලා)
     proc.stdout.on('data', (data) => console.log(data));
     proc.stderr.on('data', (data) => console.log(data));
 
     proc.on('close', (code) => {
-        console.log(`Stream stopped (Exit Code: ${code}). Restarting in 5s...`);
-        if (source.includes("gbsPl62m3Vw")) isGarfieldDone = true;
+        console.log(`Stream stopped. Restarting in 5s...`);
+        if (source.includes("gbsPl62m3Vw") && code === 0) isGarfieldDone = true;
         setTimeout(startStream, 5000);
     });
 };
