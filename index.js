@@ -1,56 +1,52 @@
 const { exec } = require('child_process');
 const express = require('express');
+const ytdl = require('@distube/ytdl-core');
+const ffmpegPath = require('ffmpeg-static');
 const app = express();
 
-app.get('/', (req, res) => res.send('Viru TV Pro: Ads Bypassed! 🚀'));
+app.get('/', (req, res) => res.send('Viru TV: Live Now! 📡'));
 app.listen(process.env.PORT || 3000);
 
 const streamURL = "rtmp://a.rtmp.youtube.com/live2/";
 const streamKey = process.env.STREAM_KEY;
 
-const startStream = () => {
+const startStream = async () => {
     const videoUrl = "https://www.youtube.com/watch?v=DZhT5oOflOw";
     
-    console.log(`[LOG] Fetching Clean Stream (No Ads) for: ${videoUrl}`);
+    console.log(`[LOG] Getting video link for Viru TV...`);
 
-    // Ads අයින් කරලා Direct Link එක ගන්න Command එක
-    // මෙතන --no-ads සහ player_client=android දාලා තියෙන්නේ Ads වළක්වන්න
-    const ytCmd = `npx yt-dlp --no-ads --extractor-args "youtube:player_client=android" -f "best[height<=480]" -g ${videoUrl}`;
+    try {
+        // YouTube එකෙන් Ads නැතුව ලින්ක් එක ගන්න විදිහ
+        const info = await ytdl.getInfo(videoUrl);
+        const format = ytdl.chooseFormat(info.formats, { quality: '18' }); // 360p (Data ඉතුරු වෙනවා)
+        const directLink = format.url;
 
-    exec(ytCmd, (error, stdout, stderr) => {
-        if (error) {
-            console.error(`[YT-DLP ERROR] ${error.message}`);
-            return setTimeout(startStream, 5000);
-        }
+        console.log("[SUCCESS] Link Received. Starting FFmpeg...");
 
-        const directLink = stdout.trim();
-        if (!directLink || directLink.includes("manifest")) {
-            console.error(`[ERROR] Direct link invalid or blocked. Retrying...`);
-            return setTimeout(startStream, 5000);
-        }
+        // FFmpeg command එක
+        const ffmpegCmd = `${ffmpegPath} -re -reconnect 1 -reconnect_at_eof 1 -reconnect_streamed 1 -reconnect_delay_max 5 -i "${directLink}" -vcodec libx264 -preset ultrafast -b:v 800k -maxrate 1000k -bufsize 2000k -acodec aac -b:a 96k -f flv "${streamURL}${streamKey}"`;
 
-        console.log("[SUCCESS] Clean Link found. Starting FFmpeg...");
+        const proc = exec(ffmpegCmd);
 
-        // FFmpeg එකට ලින්ක් එක දෙනවා
-        const ffmpegCmd = `ffmpeg -re -reconnect 1 -reconnect_at_eof 1 -reconnect_streamed 1 -reconnect_delay_max 5 -i "${directLink}" -vcodec libx264 -preset ultrafast -b:v 800k -maxrate 1000k -bufsize 2000k -acodec aac -b:a 96k -f flv "${streamURL}${streamKey}"`;
-
-        const ffmpegProc = exec(ffmpegCmd);
-
-        ffmpegProc.stderr.on('data', (data) => {
+        proc.stderr.on('data', (data) => {
             if (data.includes("frame=")) {
-                process.stdout.write("."); 
+                process.stdout.write("."); // වැඩ කරන බව පෙන්වීමට
             }
         });
 
-        ffmpegProc.on('close', (code) => {
-            console.log(`\n[LOG] Stream closed (${code}). Restarting...`);
+        proc.on('close', (code) => {
+            console.log(`\n[LOG] Stream ended (${code}). Restarting...`);
             setTimeout(startStream, 5000);
         });
-    });
+
+    } catch (err) {
+        console.error(`[ERROR] ${err.message}`);
+        setTimeout(startStream, 10000);
+    }
 };
 
 if (!streamKey) {
-    console.error("[ERROR] No STREAM_KEY found!");
+    console.error("[CRITICAL] NO STREAM_KEY FOUND!");
 } else {
     startStream();
 }
