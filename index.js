@@ -3,7 +3,7 @@ const express = require('express');
 const fs = require('fs'); 
 const app = express();
 
-app.get('/', (req, res) => res.send('Viru TV: Stable & Unstoppable Mode is LIVE! 🚀📡'));
+app.get('/', (req, res) => res.send('Viru TV: V9 is LIVE and Reconnecting! 🚀📡'));
 app.listen(process.env.PORT || 3000);
 
 const streamURL = "rtmp://a.rtmp.youtube.com/live2/";
@@ -16,12 +16,13 @@ const PIRYTH_V2 = "https://github.com/Viruna2010/VIRU-TV/releases/download/v2.0/
 const NATURE_MUSIC = "https://github.com/Viruna2010/VIRU-TV/releases/download/v4.0/1.Hour.Long.No.Copyright.video.__.Nature.and.music.mp4";
 const DESHABIMANI = "https://github.com/Viruna2010/VIRU-TV/releases/download/v3.0/Uda.Gee._.Sinhala.Morning.Songs.Volume.01._.Sinhala.Song._.SinduManager.mp4";
 
-// --- සින්දු ලිස්ට් එක (දැන් වීඩියෝ 4ක් තියෙනවා) ---
+// --- සින්දු ලිස්ට් එක (දැන් වීඩියෝ 5ක් තියෙනවා) ---
 const SONG_LINKS = [
     "https://github.com/Viruna2010/VIRU-TV/releases/download/v6.0/videoplayback.mp4", 
     "https://github.com/Viruna2010/VIRU-TV/releases/download/v5.0/New.Trending.Sinhala.Remix.Collection.Trending.Sinhala.Songs.PlayList.-.Oshana.Alahakoon.240p.h264.mp4",
     "https://github.com/Viruna2010/VIRU-TV/releases/download/v7.0/YTDown.com_YouTube_Media_C18ClAT_aQ4_002_240p.mp4",
-    "https://github.com/Viruna2010/VIRU-TV/releases/download/v8.0/Trending.Sinhala.Band.Nonstop.Sinhala.Sindu.Best.New.Sinhala.Songs.Collection.Shaa.Beats.-.Shaa.Beats.240p.h264.mp4" // අලුත් එක
+    "https://github.com/Viruna2010/VIRU-TV/releases/download/v8.0/Trending.Sinhala.Band.Nonstop.Sinhala.Sindu.Best.New.Sinhala.Songs.Collection.Shaa.Beats.-.Shaa.Beats.240p.h264.mp4",
+    "https://github.com/Viruna2010/VIRU-TV/releases/download/v9.0/YTDown.com_YouTube_Media_CB7wj-jy0o0_004_240p.mp4" // අලුත් v9.0
 ];
 
 const saveState = (data) => fs.writeFileSync(MEMORY_FILE, JSON.stringify(data));
@@ -44,9 +45,9 @@ const startEngine = () => {
     const randomSong = SONG_LINKS[Math.floor(Math.random() * SONG_LINKS.length)];
 
     if (state.isFirstRun) {
-        console.log("[SYSTEM] Deploy Success! Playing v8.0 Band Nonstop First...");
-        // අලුත්ම වීඩියෝ එක මුලින්ම ප්ලේ වෙන්න දැම්මා
-        videoToPlay = "https://github.com/Viruna2010/VIRU-TV/releases/download/v8.0/Trending.Sinhala.Band.Nonstop.Sinhala.Sindu.Best.New.Sinhala.Songs.Collection.Shaa.Beats.-.Shaa.Beats.240p.h264.mp4"; 
+        console.log("[SYSTEM] Deploy Success! Playing v9.0 First as requested...");
+        // අලුත්ම වීඩියෝ එක (v9.0) මුලින්ම ප්ලේ වෙන්න සෙට් කළා
+        videoToPlay = "https://github.com/Viruna2010/VIRU-TV/releases/download/v9.0/YTDown.com_YouTube_Media_CB7wj-jy0o0_004_240p.mp4"; 
         state.isFirstRun = false;
         saveState(state);
     } else {
@@ -61,16 +62,15 @@ const startEngine = () => {
         else videoToPlay = NATURE_MUSIC;
     }
 
-    console.log(`[LIVE] SL Time: ${hour}:00 | Asset: ${videoToPlay}`);
+    console.log(`[LIVE TV] SL Time: ${hour}:00 | Streaming: ${videoToPlay}`);
 
-    // --- ERROR FIX: Reconnect flags ශක්තිමත් කළා ---
-    // -reconnect 1 -reconnect_at_eof 1 -reconnect_streamed 1 පාවිච්චි කරලා තියෙන්නේ GitHub Error එක මග හරින්න
+    // FFmpeg settings with optimized reconnects to fix "Connection reset"
     const ffmpegCmd = `ffmpeg -re -reconnect 1 -reconnect_at_eof 1 -reconnect_streamed 1 -reconnect_delay_max 5 -i "${videoToPlay}" -vcodec libx264 -preset ultrafast -b:v 300k -maxrate 350k -bufsize 600k -r 15 -s 640x360 -g 30 -acodec aac -b:a 128k -ar 44100 -f flv "${streamURL}${streamKey}"`;
 
     currentProcess = exec(ffmpegCmd);
 
     currentProcess.on('close', (code) => {
-        console.log(`[SYSTEM] Connection reset or finished. Restarting in 1s...`);
+        console.log(`[SYSTEM] Connection lost (Code ${code}). Restarting engine...`);
         setTimeout(startEngine, 1000); 
     });
 };
