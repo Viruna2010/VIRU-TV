@@ -1,10 +1,9 @@
 const { exec } = require('child_process');
 const express = require('express');
 const fs = require('fs');
-const axios = require('axios');
 const app = express();
 
-app.get('/', (res) => res.send('Viru TV V43.0: Keyframe Error Fixed! 🚀📡'));
+app.get('/', (req, res) => res.send('Viru TV V45.0: SL Time Fixed & Nature Mode Active! 🚀📡'));
 app.listen(process.env.PORT || 3000);
 
 const streamURL = "rtmp://a.rtmp.youtube.com/live2/";
@@ -70,8 +69,10 @@ const PLAYLISTS = {
 };
 
 const getSLTime = () => {
-    const slTime = new Date(new Date().toLocaleString("en-US", {timeZone: "Asia/Colombo"}));
-    return { hr: slTime.getHours(), min: slTime.getMinutes() };
+    const now = new Date();
+    // UTC වෙලාවට පැය 5 කුයි විනාඩි 30 කුයි එකතු කරලා ලංකාවේ වෙලාව හදනවා
+    const slDate = new Date(now.getTime() + (now.getTimezoneOffset() * 60000) + (330 * 60000));
+    return { hr: slDate.getHours(), min: slDate.getMinutes() };
 };
 
 const getAdNow = () => {
@@ -123,9 +124,7 @@ const startEngine = () => {
         else videoToPlay = PLAYLISTS.PIRYTH[0];
     }
 
-    console.log(`[${hr}:${min}] 🎬 Engine Playing: ${videoToPlay}`);
-    
-    // මෙතන -g 36 සහ -keyint_min 36 දාලා Keyframes fix කළා ✅
+    console.log(`[SL TIME ${hr}:${min}] 🎬 Engine Playing: ${videoToPlay}`);
     const ffmpegCmd = `ffmpeg -re -reconnect 1 -reconnect_at_eof 1 -reconnect_streamed 1 -reconnect_delay_max 5 -i "${videoToPlay}" -vcodec libx264 -preset ultrafast -tune zerolatency -g 36 -keyint_min 36 -b:v 280k -maxrate 320k -bufsize 600k -r 18 -s 640x360 -acodec aac -b:a 96k -f flv "${streamURL}${streamKey}"`;
     
     currentProcess = exec(ffmpegCmd);
@@ -137,6 +136,6 @@ setInterval(() => {
     if ((adUrl && !isAdPlaying) || getSLTime().min === 0) {
         if (currentProcess) currentProcess.kill('SIGKILL');
     }
-}, 40000);
+}, 50000);
 
 if (streamKey) startEngine();
