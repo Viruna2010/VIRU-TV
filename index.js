@@ -4,7 +4,7 @@ const fs = require('fs');
 const axios = require('axios');
 const app = express();
 
-app.get('/', (req, res) => res.send('Viru TV V22.0: Movie Reviews are LIVE! 🚀🎬'));
+app.get('/', (req, res) => res.send('Viru TV V22.5: Movie Review Playlist Expanded! 🚀🎬'));
 app.listen(process.env.PORT || 3000);
 
 const streamURL = "rtmp://a.rtmp.youtube.com/live2/";
@@ -12,7 +12,7 @@ const streamKey = process.env.STREAM_KEY;
 let currentProcess = null;
 let isAdPlaying = false;
 
-let playedHistory = { MORNING: [], TRENDING: [], CARTOONS: [], COMEDY: [], REVIEWS: [], ANIME: [] };
+let playedHistory = { MORNING: [], TRENDING: [], CARTOONS: [], COMEDY: [], REVIEWS: [] };
 
 const PLAYLISTS = {
     PIRYTH: [
@@ -38,14 +38,14 @@ const PLAYLISTS = {
         "https://github.com/Viruna2010/VIRU-TV/releases/download/v29.0/Funny.dog.videos.Funny.dogs.fails.Cute.dogs.Funny.dogs.compilation.Best.dog.vines.mp4",
         "https://github.com/Viruna2010/VIRU-TV/releases/download/v30.0/ONE.HOUR_.TRY.NOT.TO.LAUGH.CHALLENGE.Funny.Pranks.Videos.and.Scare.Cam.Fails.for.2023.mp4"
     ],
-    // දවල් 2 - 3:30 (Movie Reviews) ✅
+    // දවල් 2 - 4 Movie Reviews (දැන් වීඩියෝ 6ක් තියෙනවා) ✅
     REVIEWS: [
-        "https://github.com/Viruna2010/VIRU-TV/releases/download/v31.0/Spider.man.2.in.Sinhala.review.full.movie.DOCTOR.OCTOPUS.MineVoice.MAX.mp4"
-    ],
-    // හවස 3:30 - 4:00 (Anime) ✅
-    ANIME: [
-        "https://github.com/Viruna2010/VIRU-TV/releases/download/v37.0/Anime_1.mp4",
-        "https://github.com/Viruna2010/VIRU-TV/releases/download/v38.0/Anime_2.mp4"
+        "https://github.com/Viruna2010/VIRU-TV/releases/download/v31.0/Spider.man.2.in.Sinhala.review.full.movie.DOCTOR.OCTOPUS.MineVoice.MAX.mp4",
+        "https://github.com/Viruna2010/VIRU-TV/releases/download/v32.0/videoplayback.mp4",
+        "https://github.com/Viruna2010/VIRU-TV/releases/download/v33.0/_.DEAD.SILENCE._.DEAD.SILENCE.MOVIE.EXPLAINED.IN.SINHALA.mp4",
+        "https://github.com/Viruna2010/VIRU-TV/releases/download/v35.0/full.Movie.review.in.Sinhala._.films.in.Sinhala_.Adventure.Thrilling.Horror.Movie.mp4",
+        "https://github.com/Viruna2010/VIRU-TV/releases/download/v36.0/_.HORROR.MOVIE.SINHALA.REVIEW.mp4",
+        "https://github.com/Viruna2010/VIRU-TV/releases/download/v37.0/_._.English.vinglish._Hiccup.Sinhala.Cinema_.Sinhala.movie.review.mp4"
     ],
     CARTOONS: [
         "https://github.com/Viruna2010/VIRU-TV/releases/download/v15.0/Chuttai.Chutti.Sinhala.Cartoon.__.__.The.Disables.__.sinhalacartoon.mp4",
@@ -107,11 +107,8 @@ const startEngine = () => {
         else if (hr >= 10 && hr < 12) videoToPlay = getNextVideo('TRENDING');
         else if (hr >= 12 && hr < 14) videoToPlay = getNextVideo('COMEDY');
         
-        // දවල් 2 සිට 3:30 වෙනකම් Movie Reviews (REVIEWS)
-        else if ((hr === 14) || (hr === 15 && min < 30)) videoToPlay = getNextVideo('REVIEWS');
-        
-        // හවස 3:30 සිට 4:00 වෙනකම් Anime
-        else if (hr === 15 && min >= 30) videoToPlay = getNextVideo('ANIME');
+        // හවස 4 වෙනකම්ම Movie Reviews (REVIEWS)
+        else if (hr >= 14 && hr < 16) videoToPlay = getNextVideo('REVIEWS');
         
         else if (hr >= 16 && hr < 18) videoToPlay = getNextVideo('CARTOONS');
         else if (hr === 18) videoToPlay = PLAYLISTS.BANA;
@@ -129,8 +126,7 @@ const startEngine = () => {
 setInterval(() => {
     const adUrl = getAdNow();
     const { min } = getSLTime();
-    // විනාඩි 00 දී සහ 30 දී ස්ලොට් මාරු වන නිසා restart කරනවා
-    if ((adUrl && !isAdPlaying) || min === 0 || min === 30) {
+    if ((adUrl && !isAdPlaying) || min === 0) {
         if (currentProcess) currentProcess.kill('SIGKILL');
     }
 }, 35000);
