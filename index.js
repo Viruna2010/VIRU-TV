@@ -4,15 +4,15 @@ const fs = require('fs');
 const axios = require('axios');
 const app = express();
 
-app.get('/', (req, res) => res.send('Viru TV V21.6: Ads Logic Re-Enabled & Comedy Active! 🚀📺'));
+app.get('/', (req, res) => res.send('Viru TV V22.0: Movie Reviews are LIVE! 🚀🎬'));
 app.listen(process.env.PORT || 3000);
 
 const streamURL = "rtmp://a.rtmp.youtube.com/live2/";
 const streamKey = process.env.STREAM_KEY;
 let currentProcess = null;
-let isAdPlaying = false; // ඇඩ්ස් ප්ලේ වෙනවාද කියලා බලන එක
+let isAdPlaying = false;
 
-let playedHistory = { MORNING: [], TRENDING: [], CARTOONS: [], COMEDY: [], ANIME: [] };
+let playedHistory = { MORNING: [], TRENDING: [], CARTOONS: [], COMEDY: [], REVIEWS: [], ANIME: [] };
 
 const PLAYLISTS = {
     PIRYTH: [
@@ -38,11 +38,14 @@ const PLAYLISTS = {
         "https://github.com/Viruna2010/VIRU-TV/releases/download/v29.0/Funny.dog.videos.Funny.dogs.fails.Cute.dogs.Funny.dogs.compilation.Best.dog.vines.mp4",
         "https://github.com/Viruna2010/VIRU-TV/releases/download/v30.0/ONE.HOUR_.TRY.NOT.TO.LAUGH.CHALLENGE.Funny.Pranks.Videos.and.Scare.Cam.Fails.for.2023.mp4"
     ],
+    // දවල් 2 - 3:30 (Movie Reviews) ✅
+    REVIEWS: [
+        "https://github.com/Viruna2010/VIRU-TV/releases/download/v31.0/Spider.man.2.in.Sinhala.review.full.movie.DOCTOR.OCTOPUS.MineVoice.MAX.mp4"
+    ],
+    // හවස 3:30 - 4:00 (Anime) ✅
     ANIME: [
         "https://github.com/Viruna2010/VIRU-TV/releases/download/v37.0/Anime_1.mp4",
-        "https://github.com/Viruna2010/VIRU-TV/releases/download/v38.0/Anime_2.mp4",
-        "https://github.com/Viruna2010/VIRU-TV/releases/download/v39.0/Anime_3.mp4",
-        "https://github.com/Viruna2010/VIRU-TV/releases/download/v40.0/Anime_4.mp4"
+        "https://github.com/Viruna2010/VIRU-TV/releases/download/v38.0/Anime_2.mp4"
     ],
     CARTOONS: [
         "https://github.com/Viruna2010/VIRU-TV/releases/download/v15.0/Chuttai.Chutti.Sinhala.Cartoon.__.__.The.Disables.__.sinhalacartoon.mp4",
@@ -67,7 +70,6 @@ const getSLTime = () => {
     return { hr: slTime.getHours(), min: slTime.getMinutes() };
 };
 
-// ADS logic එක මෙතන තියෙනවා
 const getAdNow = () => {
     try {
         const { hr, min } = getSLTime();
@@ -95,7 +97,6 @@ const startEngine = () => {
     const adUrl = getAdNow();
     let videoToPlay;
 
-    // ඇඩ් එකක් තියෙනවා නම් ඒක ප්ලේ කරන්න
     if (adUrl && !isAdPlaying) {
         videoToPlay = adUrl;
         isAdPlaying = true;
@@ -104,8 +105,14 @@ const startEngine = () => {
         if (hr >= 0 && hr < 8) videoToPlay = (hr < 7 || (hr === 7 && min < 30)) ? PLAYLISTS.PIRYTH[0] : PLAYLISTS.PIRYTH[1];
         else if (hr >= 8 && hr < 10) videoToPlay = getNextVideo('MORNING');
         else if (hr >= 10 && hr < 12) videoToPlay = getNextVideo('TRENDING');
-        else if (hr >= 12 && hr < 15) videoToPlay = getNextVideo('COMEDY');
-        else if (hr >= 15 && hr < 16) videoToPlay = getNextVideo('ANIME');
+        else if (hr >= 12 && hr < 14) videoToPlay = getNextVideo('COMEDY');
+        
+        // දවල් 2 සිට 3:30 වෙනකම් Movie Reviews (REVIEWS)
+        else if ((hr === 14) || (hr === 15 && min < 30)) videoToPlay = getNextVideo('REVIEWS');
+        
+        // හවස 3:30 සිට 4:00 වෙනකම් Anime
+        else if (hr === 15 && min >= 30) videoToPlay = getNextVideo('ANIME');
+        
         else if (hr >= 16 && hr < 18) videoToPlay = getNextVideo('CARTOONS');
         else if (hr === 18) videoToPlay = PLAYLISTS.BANA;
         else if (hr >= 19 && hr < 22) videoToPlay = getNextVideo('TRENDING');
@@ -119,11 +126,11 @@ const startEngine = () => {
     currentProcess.on('close', () => setTimeout(startEngine, 1000));
 };
 
-// ඇඩ්ස් චෙක් කිරීම සඳහා setInterval එක
 setInterval(() => {
     const adUrl = getAdNow();
     const { min } = getSLTime();
-    if ((adUrl && !isAdPlaying) || min === 0) {
+    // විනාඩි 00 දී සහ 30 දී ස්ලොට් මාරු වන නිසා restart කරනවා
+    if ((adUrl && !isAdPlaying) || min === 0 || min === 30) {
         if (currentProcess) currentProcess.kill('SIGKILL');
     }
 }, 35000);
