@@ -4,7 +4,7 @@ const fs = require('fs');
 const axios = require('axios');
 const app = express();
 
-app.get('/', (req, res) => res.send('Viru TV: V16.4 Safe Engine is ONLINE! 🚀📡'));
+app.get('/', (req, res) => res.send('Viru TV: V16.6 Stable (3 Cartoons Slot) is ONLINE! 🚀📡'));
 app.listen(process.env.PORT || 3000);
 
 const streamURL = "rtmp://a.rtmp.youtube.com/live2/";
@@ -29,9 +29,15 @@ const MORNING_SHOW = [
 const TRENDING_SONGS = [
     "https://github.com/Viruna2010/VIRU-TV/releases/download/v6.0/videoplayback.mp4", 
     "https://github.com/Viruna2010/VIRU-TV/releases/download/v5.0/New.Trending.Sinhala.Remix.Collection.Trending.Sinhala.Songs.PlayList.-.Oshana.Alahakoon.240p.h264.mp4",
-    "https://github.com/Viruna2010/VIRU-TV/releases/download/v7.0/YTDown.com_YouTube_Media_C18ClAT_aQ4_002_240p.mp4",
     "https://github.com/Viruna2010/VIRU-TV/releases/download/v8.0/Trending.Sinhala.Band.Nonstop.Sinhala.Sindu.Best.New.Sinhala.Songs.Collection.Shaa.Beats.240p.h264.mp4",
     "https://github.com/Viruna2010/VIRU-TV/releases/download/v9.0/YTDown.com_YouTube_Media_CB7wj-jy0o0_004_240p.mp4"
+];
+
+// --- උඹේ අලුත් කාටූන් ලිස්ට් එක මෙන්න ---
+const CARTOONS = [
+    "https://github.com/Viruna2010/VIRU-TV/releases/download/v15.0/Chuttai.Chutti.Sinhala.Cartoon.__.__.The.Disables.__.sinhalacartoon.mp4",
+    "https://github.com/Viruna2010/VIRU-TV/releases/download/v16.0/Dangharawaliga.__.__.Marsupilamiyai.__.sinhalacartoon.mp4",
+    "https://github.com/Viruna2010/VIRU-TV/releases/download/v17/garfield.3.stories.Sinhala.Dubed._._.Garfield.Sinhala.Cartoon.Dubed.Ep-1.mp4"
 ];
 
 const EVENING_BANA = "https://github.com/Viruna2010/VIRU-TV/releases/download/v14.0/videoplayback.2.mp4";
@@ -69,24 +75,42 @@ const startEngine = () => {
         isAdPlaying = true;
     } else {
         isAdPlaying = false;
-        if (hr >= 0 && hr < 8) videoToPlay = (hr < 7 || (hr === 7 && min < 30)) ? PIRYTH[0] : PIRYTH[1];
-        else if (hr >= 8 && hr < 10) videoToPlay = MORNING_SHOW[Math.floor(Math.random() * MORNING_SHOW.length)];
-        else if (hr >= 10 && hr < 18) videoToPlay = TRENDING_SONGS[Math.floor(Math.random() * TRENDING_SONGS.length)];
-        else if (hr === 18) videoToPlay = EVENING_BANA;
-        else if (hr >= 19 && hr < 22) videoToPlay = TRENDING_SONGS[Math.floor(Math.random() * TRENDING_SONGS.length)];
-        else if (hr >= 22 && hr < 23) videoToPlay = NATURE;
-        else videoToPlay = DESHABIMANI;
+        
+        if (hr >= 0 && hr < 8) {
+            videoToPlay = (hr < 7 || (hr === 7 && min < 30)) ? PIRYTH[0] : PIRYTH[1];
+        } 
+        else if (hr >= 8 && hr < 10) {
+            videoToPlay = MORNING_SHOW[Math.floor(Math.random() * MORNING_SHOW.length)];
+        }
+        else if (hr >= 10 && hr < 16) {
+            videoToPlay = TRENDING_SONGS[Math.floor(Math.random() * TRENDING_SONGS.length)];
+        }
+        else if (hr >= 16 && hr < 18) { // හවස 4 - 6 කාටූන් වෙලාව
+            console.log("📺 Playing Cartoon...");
+            videoToPlay = CARTOONS[Math.floor(Math.random() * CARTOONS.length)];
+        }
+        else if (hr === 18) {
+            videoToPlay = EVENING_BANA;
+        }
+        else if (hr >= 19 && hr < 22) {
+            videoToPlay = TRENDING_SONGS[Math.floor(Math.random() * TRENDING_SONGS.length)];
+        }
+        else if (hr >= 22 && hr < 23) {
+            videoToPlay = NATURE;
+        }
+        else {
+            videoToPlay = DESHABIMANI;
+        }
     }
 
     console.log(`[${hr}:${min}] Playing: ${videoToPlay}`);
 
-    // Ticker (drawtext) එක සම්පූර්ණයෙන්ම අයින් කර ඇත - 100% Stable
-    const ffmpegCmd = `ffmpeg -re -reconnect 1 -reconnect_at_eof 1 -reconnect_streamed 1 -reconnect_delay_max 5 -i "${videoToPlay}" -vcodec libx264 -preset ultrafast -tune zerolatency -b:v 300k -maxrate 350k -bufsize 700k -r 20 -s 640x360 -g 40 -acodec aac -b:a 128k -f flv "${streamURL}${streamKey}"`;
+    const ffmpegCmd = `ffmpeg -re -reconnect 1 -reconnect_at_eof 1 -reconnect_streamed 1 -reconnect_delay_max 5 -i "${videoToPlay}" -vcodec libx264 -preset ultrafast -tune zerolatency -b:v 280k -maxrate 320k -bufsize 600k -r 18 -s 640x360 -acodec aac -b:a 96k -f flv "${streamURL}${streamKey}"`;
 
     currentProcess = exec(ffmpegCmd);
     
     currentProcess.on('close', (code) => {
-        console.log(`Stream process closed with code ${code}. Restarting in 3s...`);
+        console.log(`Stream closed (${code}). Restarting in 3s...`);
         setTimeout(startEngine, 3000);
     });
 };
@@ -96,7 +120,7 @@ setInterval(() => {
     const adUrl = getAdNow();
     if (min === 0 || (adUrl && !isAdPlaying)) {
         if (currentProcess) {
-            console.log("Switching video slot...");
+            console.log("Slot Switching...");
             currentProcess.kill('SIGKILL');
         }
     }
