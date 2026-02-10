@@ -4,22 +4,23 @@ const fs = require('fs');
 const axios = require('axios');
 const app = express();
 
-app.get('/', (req, res) => res.send('Viru TV V19.1: Smart Shuffle + Ads is ONLINE! 🚀📡'));
+app.get('/', (req, res) => res.send('Viru TV V19.6: Triple Play Mode (Comedy/Songs/Cartoons) is LIVE! 🚀📡'));
 app.listen(process.env.PORT || 3000);
 
 const streamURL = "rtmp://a.rtmp.youtube.com/live2/";
 const streamKey = process.env.STREAM_KEY;
 let currentProcess = null;
-let isAdPlaying = false; // ඇඩ් එකක් යනවාද නැද්ද කියලා බලන්න
+let isAdPlaying = false;
 
-// Shuffle History
+// ප්ලේ වෙච්ච වීඩියෝ මතක තියාගන්න (Shuffle History)
 let playedHistory = {
     MORNING: [],
     TRENDING: [],
-    CARTOONS: []
+    CARTOONS: [],
+    COMEDY: []
 };
 
-// ================= [ PLAYLISTS ] =================
+// ================= [ VIRU TV MASTER PLAYLIST ] =================
 
 const PLAYLISTS = {
     PIRYTH: [
@@ -51,19 +52,25 @@ const PLAYLISTS = {
         "https://github.com/Viruna2010/VIRU-TV/releases/download/v24.0/videoplayback.4.mp4",
         "https://github.com/Viruna2010/VIRU-TV/releases/download/v25.0/-Full.Episode.mp4"
     ],
+    COMEDY: [
+        "https://github.com/Viruna2010/VIRU-TV/releases/download/v26.0/1.Hour.Extreme.Try.Not.To.Laughing.Compilation.memecompilation.mp4",
+        "https://github.com/Viruna2010/VIRU-TV/releases/download/v27.0/Noon_Show_2.mp4",
+        "https://github.com/Viruna2010/VIRU-TV/releases/download/v28.0/Noon_Show_3.mp4",
+        "https://github.com/Viruna2010/VIRU-TV/releases/download/v29.0/Noon_Show_4.mp4",
+        "https://github.com/Viruna2010/VIRU-TV/releases/download/v30.0/Noon_Show_5.mp4"
+    ],
     BANA: "https://github.com/Viruna2010/VIRU-TV/releases/download/v14.0/videoplayback.2.mp4",
     NATURE: "https://github.com/Viruna2010/VIRU-TV/releases/download/v4.0/1.Hour.Long.No.Copyright.video.__.Nature.and.music.mp4",
     DESHABIMANI: "https://github.com/Viruna2010/VIRU-TV/releases/download/v3.0/Uda.Gee._.Sinhala.Morning.Songs.Volume.01._.Sinhala.Song._.SinduManager.mp4"
 };
 
-// ================= [ LOGIC ] =================
+// ================= [ ENGINE LOGIC ] =================
 
 const getSLTime = () => {
     const slTime = new Date(new Date().toLocaleString("en-US", {timeZone: "Asia/Colombo"}));
     return { hr: slTime.getHours(), min: slTime.getMinutes() };
 };
 
-// ඇඩ් එකක් ප්ලේ කිරීමට තිබේදැයි බලන්න
 const getAdNow = () => {
     try {
         const { hr, min } = getSLTime();
@@ -94,17 +101,19 @@ const startEngine = () => {
     const adUrl = getAdNow();
     let videoToPlay;
 
-    // ඇඩ් එකක් තියෙනවා නම් ඒකට මුල් තැන දෙනවා
     if (adUrl && !isAdPlaying) {
-        console.log(`[${hr}:${min}] 📢 AD BREAK: Playing ${adUrl}`);
         videoToPlay = adUrl;
         isAdPlaying = true;
     } else {
         isAdPlaying = false;
+        
+        // --- කාලසටහන ---
         if (hr >= 0 && hr < 8) videoToPlay = (hr < 7 || (hr === 7 && min < 30)) ? PLAYLISTS.PIRYTH[0] : PLAYLISTS.PIRYTH[1];
         else if (hr >= 8 && hr < 10) videoToPlay = getNextVideo('MORNING');
-        else if (hr >= 10 && hr < 16) videoToPlay = getNextVideo('TRENDING');
-        else if (hr >= 16 && hr < 18) videoToPlay = getNextVideo('CARTOONS');
+        else if (hr >= 10 && hr < 12) videoToPlay = getNextVideo('TRENDING');
+        else if (hr >= 12 && hr < 14) videoToPlay = getNextVideo('COMEDY'); // දවල් 12-2 Comedy Show
+        else if (hr >= 14 && hr < 16) videoToPlay = getNextVideo('TRENDING');
+        else if (hr >= 16 && hr < 18) videoToPlay = getNextVideo('CARTOONS'); // හවස 4-6 කාටූන්
         else if (hr === 18) videoToPlay = PLAYLISTS.BANA;
         else if (hr >= 19 && hr < 22) videoToPlay = getNextVideo('TRENDING');
         else if (hr >= 22 && hr < 23) videoToPlay = PLAYLISTS.NATURE;
@@ -112,23 +121,29 @@ const startEngine = () => {
     }
 
     console.log(`[${hr}:${min}] 🎬 Playing: ${videoToPlay}`);
+    
+    // Original Quality Settings
     const ffmpegCmd = `ffmpeg -re -reconnect 1 -reconnect_at_eof 1 -reconnect_streamed 1 -reconnect_delay_max 5 -i "${videoToPlay}" -vcodec libx264 -preset ultrafast -tune zerolatency -b:v 280k -maxrate 320k -bufsize 600k -r 18 -s 640x360 -acodec aac -b:a 96k -f flv "${streamURL}${streamKey}"`;
 
     currentProcess = exec(ffmpegCmd);
-    currentProcess.on('close', () => setTimeout(startEngine, 1000));
+    
+    // වීඩියෝ එක ඉවර වුණ සැනින් ඊළඟ එකට යනවා
+    currentProcess.on('close', () => {
+        setTimeout(startEngine, 1000);
+    });
 };
 
-// ඇඩ් වෙලාවට හෝ පැය වෙනස් වන විට ස්විච් කිරීම
+// ඇඩ්ස් සහ කාලසටහන් වෙනස්වීම් චෙක් කරන Interval එක
 setInterval(() => {
     const { min } = getSLTime();
     const adUrl = getAdNow();
     
-    // ඇඩ් එකක් ප්ලේ වෙන්න වෙලාව ආවොත් හෝ පැයක ආරම්භයේදී ප්ලේ වෙන එක නවත්වන්න
+    // හැම පැයකම 00 විනාඩියේදී හෝ ඇඩ් එකක් ආවොත් ලයිව් එක ස්විච් කරනවා
     if ((adUrl && !isAdPlaying) || min === 0) {
-        console.log("Interrupting for Ad or Schedule change...");
+        console.log("Auto-switching for scheduled program/Ad...");
         if (currentProcess) currentProcess.kill('SIGKILL');
     }
-}, 30000);
+}, 35000);
 
 setInterval(() => { axios.get('https://viru-tv.onrender.com/').catch(() => {}); }, 600000);
 
