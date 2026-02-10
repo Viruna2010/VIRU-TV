@@ -4,7 +4,7 @@ const fs = require('fs');
 const axios = require('axios');
 const app = express();
 
-app.get('/', (req, res) => res.send('Viru TV V22.5: Movie Review Playlist Expanded! 🚀🎬'));
+app.get('/', (req, res) => res.send('Viru TV V26.0: All Slots & Pirith Fixed! 🚀📡'));
 app.listen(process.env.PORT || 3000);
 
 const streamURL = "rtmp://a.rtmp.youtube.com/live2/";
@@ -38,7 +38,6 @@ const PLAYLISTS = {
         "https://github.com/Viruna2010/VIRU-TV/releases/download/v29.0/Funny.dog.videos.Funny.dogs.fails.Cute.dogs.Funny.dogs.compilation.Best.dog.vines.mp4",
         "https://github.com/Viruna2010/VIRU-TV/releases/download/v30.0/ONE.HOUR_.TRY.NOT.TO.LAUGH.CHALLENGE.Funny.Pranks.Videos.and.Scare.Cam.Fails.for.2023.mp4"
     ],
-    // දවල් 2 - 4 Movie Reviews (දැන් වීඩියෝ 6ක් තියෙනවා) ✅
     REVIEWS: [
         "https://github.com/Viruna2010/VIRU-TV/releases/download/v31.0/Spider.man.2.in.Sinhala.review.full.movie.DOCTOR.OCTOPUS.MineVoice.MAX.mp4",
         "https://github.com/Viruna2010/VIRU-TV/releases/download/v32.0/videoplayback.mp4",
@@ -47,6 +46,7 @@ const PLAYLISTS = {
         "https://github.com/Viruna2010/VIRU-TV/releases/download/v36.0/_.HORROR.MOVIE.SINHALA.REVIEW.mp4",
         "https://github.com/Viruna2010/VIRU-TV/releases/download/v37.0/_._.English.vinglish._Hiccup.Sinhala.Cinema_.Sinhala.movie.review.mp4"
     ],
+    KIDS_SONGS: "https://github.com/Viruna2010/VIRU-TV/releases/download/v38.0/01._.Sinhala.Kids.Songs._.Sinhala.Lama.Geetha.Ekathuwa._.Kids.Song.Collection.mp4",
     CARTOONS: [
         "https://github.com/Viruna2010/VIRU-TV/releases/download/v15.0/Chuttai.Chutti.Sinhala.Cartoon.__.__.The.Disables.__.sinhalacartoon.mp4",
         "https://github.com/Viruna2010/VIRU-TV/releases/download/v16.0/Dangharawaliga.__.__.Marsupilamiyai.__.sinhalacartoon.mp4",
@@ -85,6 +85,7 @@ const getAdNow = () => {
 
 const getNextVideo = (category) => {
     const fullList = PLAYLISTS[category];
+    if (typeof fullList === 'string') return fullList;
     let available = fullList.filter(url => !playedHistory[category].includes(url));
     if (available.length === 0) { playedHistory[category] = []; available = fullList; }
     const selected = available[Math.floor(Math.random() * available.length)];
@@ -102,19 +103,21 @@ const startEngine = () => {
         isAdPlaying = true;
     } else {
         isAdPlaying = false;
-        if (hr >= 0 && hr < 8) videoToPlay = (hr < 7 || (hr === 7 && min < 30)) ? PLAYLISTS.PIRYTH[0] : PLAYLISTS.PIRYTH[1];
+        // 00:00 - 08:00 Pirith
+        if (hr >= 0 && hr < 8) {
+            videoToPlay = (hr < 7 || (hr === 7 && min < 30)) ? PLAYLISTS.PIRYTH[0] : PLAYLISTS.PIRYTH[1];
+        }
         else if (hr >= 8 && hr < 10) videoToPlay = getNextVideo('MORNING');
         else if (hr >= 10 && hr < 12) videoToPlay = getNextVideo('TRENDING');
         else if (hr >= 12 && hr < 14) videoToPlay = getNextVideo('COMEDY');
-        
-        // හවස 4 වෙනකම්ම Movie Reviews (REVIEWS)
-        else if (hr >= 14 && hr < 16) videoToPlay = getNextVideo('REVIEWS');
-        
-        else if (hr >= 16 && hr < 18) videoToPlay = getNextVideo('CARTOONS');
+        else if (hr === 14) videoToPlay = getNextVideo('REVIEWS'); // 2PM - 3PM
+        else if (hr === 15) videoToPlay = PLAYLISTS.KIDS_SONGS; // 3PM - 4PM ✅
+        else if (hr >= 16 && hr < 18) videoToPlay = getNextVideo('CARTOONS'); // 4PM - 6PM
         else if (hr === 18) videoToPlay = PLAYLISTS.BANA;
         else if (hr >= 19 && hr < 22) videoToPlay = getNextVideo('TRENDING');
-        else if (hr >= 22 && hr < 23) videoToPlay = PLAYLISTS.NATURE;
-        else videoToPlay = PLAYLISTS.DESHABIMANI;
+        else if (hr === 22) videoToPlay = PLAYLISTS.NATURE; // 10PM - 11PM 🌿
+        else if (hr === 23) videoToPlay = PLAYLISTS.DESHABIMANI; // 11PM - 12AM 🇱🇰
+        else videoToPlay = PLAYLISTS.PIRYTH[0];
     }
 
     console.log(`[${hr}:${min}] 🎬 Playing: ${videoToPlay}`);
@@ -129,7 +132,7 @@ setInterval(() => {
     if ((adUrl && !isAdPlaying) || min === 0) {
         if (currentProcess) currentProcess.kill('SIGKILL');
     }
-}, 35000);
+}, 40000);
 
 setInterval(() => { axios.get('https://viru-tv.onrender.com/').catch(() => {}); }, 600000);
 if (streamKey) startEngine();
