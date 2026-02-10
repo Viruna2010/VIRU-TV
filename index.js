@@ -4,7 +4,7 @@ const fs = require('fs');
 const axios = require('axios');
 const app = express();
 
-app.get('/', (req, res) => res.send('Viru TV V42.0: 100% Verified & Ordered Releases! 🚀📡'));
+app.get('/', (res) => res.send('Viru TV V43.0: Keyframe Error Fixed! 🚀📡'));
 app.listen(process.env.PORT || 3000);
 
 const streamURL = "rtmp://a.rtmp.youtube.com/live2/";
@@ -14,7 +14,6 @@ let isAdPlaying = false;
 
 let playedHistory = { MORNING: [], TRENDING: [], CARTOONS: [], COMEDY: [], REVIEWS: [], BANA: [] };
 
-// උඹ ඉල්ලපු විදිහටම සියලුම ප්ලේලිස්ට් v-number පිළිවෙළට මෙන්න:
 const PLAYLISTS = {
     PIRYTH: [
         "https://github.com/Viruna2010/VIRU-TV/releases/download/v1.0/Most.Powerful.Seth.Pirith.in.7.hours.-.7.mp4",
@@ -25,7 +24,7 @@ const PLAYLISTS = {
     TRENDING: [
         "https://github.com/Viruna2010/VIRU-TV/releases/download/v5.0/New.Trending.Sinhala.Remix.Collection.Trending.Sinhala.Songs.PlayList.-.Oshana.Alahakoon.240p.h264.mp4",
         "https://github.com/Viruna2010/VIRU-TV/releases/download/v6.0/videoplayback.mp4",
-        "https://github.com/Viruna2010/VIRU-TV/releases/download/v7.0/YTDown.com_YouTube_Media_C18ClAT_aQ4_002_240p.mp4", // True v7 Trending
+        "https://github.com/Viruna2010/VIRU-TV/releases/download/v7.0/YTDown.com_YouTube_Media_C18ClAT_aQ4_002_240p.mp4",
         "https://github.com/Viruna2010/VIRU-TV/releases/download/v8.0/Trending.Sinhala.Band.Nonstop.Sinhala.Sindu.Best.New.Sinhala.Songs.Collection.Shaa.Beats.240p.h264.mp4",
         "https://github.com/Viruna2010/VIRU-TV/releases/download/v9.0/YTDown.com_YouTube_Media_CB7wj-jy0o0_004_240p.mp4"
     ],
@@ -125,7 +124,10 @@ const startEngine = () => {
     }
 
     console.log(`[${hr}:${min}] 🎬 Engine Playing: ${videoToPlay}`);
-    const ffmpegCmd = `ffmpeg -re -reconnect 1 -reconnect_at_eof 1 -reconnect_streamed 1 -reconnect_delay_max 5 -i "${videoToPlay}" -vcodec libx264 -preset ultrafast -tune zerolatency -b:v 280k -maxrate 320k -bufsize 600k -r 18 -s 640x360 -acodec aac -b:a 96k -f flv "${streamURL}${streamKey}"`;
+    
+    // මෙතන -g 36 සහ -keyint_min 36 දාලා Keyframes fix කළා ✅
+    const ffmpegCmd = `ffmpeg -re -reconnect 1 -reconnect_at_eof 1 -reconnect_streamed 1 -reconnect_delay_max 5 -i "${videoToPlay}" -vcodec libx264 -preset ultrafast -tune zerolatency -g 36 -keyint_min 36 -b:v 280k -maxrate 320k -bufsize 600k -r 18 -s 640x360 -acodec aac -b:a 96k -f flv "${streamURL}${streamKey}"`;
+    
     currentProcess = exec(ffmpegCmd);
     currentProcess.on('close', () => setTimeout(startEngine, 1000));
 };
