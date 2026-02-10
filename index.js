@@ -4,16 +4,13 @@ const fs = require('fs');
 const axios = require('axios');
 const app = express();
 
-app.get('/', (req, res) => res.send('Viru TV: V16.3 Stable Engine is ONLINE! 🚀📡'));
+app.get('/', (req, res) => res.send('Viru TV: V16.4 Safe Engine is ONLINE! 🚀📡'));
 app.listen(process.env.PORT || 3000);
 
 const streamURL = "rtmp://a.rtmp.youtube.com/live2/";
 const streamKey = process.env.STREAM_KEY;
 let currentProcess = null;
 let isAdPlaying = false;
-
-// යටින් යන මැසේජ් එක (දැනට ඉංග්‍රීසියෙන් - සර්වර් එක Crash නොවී දුවන්න)
-const SCROLL_TEXT = "ADVERTISE WITH US: 078 688 8371 | VIRU TV LIVE MUSIC 24/7";
 
 // ================= [ VIRU TV MASTER PLAYLIST ] =================
 
@@ -83,15 +80,14 @@ const startEngine = () => {
 
     console.log(`[${hr}:${min}] Playing: ${videoToPlay}`);
 
-    // CPU එක බේරගන්න Ticker එක optimized කර ඇත (English Text only for stability)
-    const ffmpegCmd = `ffmpeg -re -reconnect 1 -reconnect_at_eof 1 -reconnect_streamed 1 -reconnect_delay_max 5 -i "${videoToPlay}" -vf "drawtext=text='${SCROLL_TEXT}':x=w-mod(t*80\\,w+tw):y=h-30:fontsize=20:fontcolor=white:box=1:boxcolor=black@0.5" -vcodec libx264 -preset ultrafast -tune zerolatency -b:v 250k -maxrate 300k -bufsize 600k -r 15 -s 640x360 -g 30 -acodec aac -b:a 64k -f flv "${streamURL}${streamKey}"`;
+    // Ticker (drawtext) එක සම්පූර්ණයෙන්ම අයින් කර ඇත - 100% Stable
+    const ffmpegCmd = `ffmpeg -re -reconnect 1 -reconnect_at_eof 1 -reconnect_streamed 1 -reconnect_delay_max 5 -i "${videoToPlay}" -vcodec libx264 -preset ultrafast -tune zerolatency -b:v 300k -maxrate 350k -bufsize 700k -r 20 -s 640x360 -g 40 -acodec aac -b:a 128k -f flv "${streamURL}${streamKey}"`;
 
     currentProcess = exec(ffmpegCmd);
     
-    // Crash Loop එක නවත්වන්න තත්පර 5ක ආරක්ෂිත Delay එකක් දැම්මා
-    currentProcess.on('close', () => {
-        console.log("Stream closed. Restarting in 5s...");
-        setTimeout(startEngine, 5000);
+    currentProcess.on('close', (code) => {
+        console.log(`Stream process closed with code ${code}. Restarting in 3s...`);
+        setTimeout(startEngine, 3000);
     });
 };
 
@@ -100,7 +96,7 @@ setInterval(() => {
     const adUrl = getAdNow();
     if (min === 0 || (adUrl && !isAdPlaying)) {
         if (currentProcess) {
-            console.log("Switching slot...");
+            console.log("Switching video slot...");
             currentProcess.kill('SIGKILL');
         }
     }
