@@ -4,7 +4,7 @@ const fs = require('fs');
 const axios = require('axios');
 const app = express();
 
-app.get('/', (req, res) => res.send('Viru TV V26.0: All Slots & Pirith Fixed! 🚀📡'));
+app.get('/', (req, res) => res.send('Viru TV V31.0: Final Master Code with All Slots Fixed! 🚀📡'));
 app.listen(process.env.PORT || 3000);
 
 const streamURL = "rtmp://a.rtmp.youtube.com/live2/";
@@ -12,7 +12,7 @@ const streamKey = process.env.STREAM_KEY;
 let currentProcess = null;
 let isAdPlaying = false;
 
-let playedHistory = { MORNING: [], TRENDING: [], CARTOONS: [], COMEDY: [], REVIEWS: [] };
+let playedHistory = { MORNING: [], TRENDING: [], CARTOONS: [], COMEDY: [], REVIEWS: [], BANA: [] };
 
 const PLAYLISTS = {
     PIRYTH: [
@@ -34,33 +34,25 @@ const PLAYLISTS = {
     COMEDY: [
         "https://github.com/Viruna2010/VIRU-TV/releases/download/v26.0/1.Hour.Extreme.Try.Not.To.Laughing.Compilation.memecompilation.mp4",
         "https://github.com/Viruna2010/VIRU-TV/releases/download/v27.0/1.Hour.Funniest.Animals.2023.Funny.Dog.Videos.Compilation.mp4",
-        "https://github.com/Viruna2010/VIRU-TV/releases/download/v28.0/Funny.Animals.Videos.-.Funny.Pets.Videos.2021.-.Funniest.Animals.Video.Compilation.of.2021.mp4",
-        "https://github.com/Viruna2010/VIRU-TV/releases/download/v29.0/Funny.dog.videos.Funny.dogs.fails.Cute.dogs.Funny.dogs.compilation.Best.dog.vines.mp4",
-        "https://github.com/Viruna2010/VIRU-TV/releases/download/v30.0/ONE.HOUR_.TRY.NOT.TO.LAUGH.CHALLENGE.Funny.Pranks.Videos.and.Scare.Cam.Fails.for.2023.mp4"
+        "https://github.com/Viruna2010/VIRU-TV/releases/download/v28.0/Funny.Animals.Videos.-.Funny.Pets.Videos.2021.-.Funniest.Animals.Video.Compilation.of.2021.mp4"
     ],
     REVIEWS: [
         "https://github.com/Viruna2010/VIRU-TV/releases/download/v31.0/Spider.man.2.in.Sinhala.review.full.movie.DOCTOR.OCTOPUS.MineVoice.MAX.mp4",
         "https://github.com/Viruna2010/VIRU-TV/releases/download/v32.0/videoplayback.mp4",
-        "https://github.com/Viruna2010/VIRU-TV/releases/download/v33.0/_.DEAD.SILENCE._.DEAD.SILENCE.MOVIE.EXPLAINED.IN.SINHALA.mp4",
-        "https://github.com/Viruna2010/VIRU-TV/releases/download/v35.0/full.Movie.review.in.Sinhala._.films.in.Sinhala_.Adventure.Thrilling.Horror.Movie.mp4",
-        "https://github.com/Viruna2010/VIRU-TV/releases/download/v36.0/_.HORROR.MOVIE.SINHALA.REVIEW.mp4",
         "https://github.com/Viruna2010/VIRU-TV/releases/download/v37.0/_._.English.vinglish._Hiccup.Sinhala.Cinema_.Sinhala.movie.review.mp4"
     ],
     KIDS_SONGS: "https://github.com/Viruna2010/VIRU-TV/releases/download/v38.0/01._.Sinhala.Kids.Songs._.Sinhala.Lama.Geetha.Ekathuwa._.Kids.Song.Collection.mp4",
     CARTOONS: [
+        "https://github.com/Viruna2010/VIRU-TV/releases/download/v39.0/videoplayback.1.mp4",
         "https://github.com/Viruna2010/VIRU-TV/releases/download/v15.0/Chuttai.Chutti.Sinhala.Cartoon.__.__.The.Disables.__.sinhalacartoon.mp4",
-        "https://github.com/Viruna2010/VIRU-TV/releases/download/v16.0/Dangharawaliga.__.__.Marsupilamiyai.__.sinhalacartoon.mp4",
-        "https://github.com/Viruna2010/VIRU-TV/releases/download/v17/garfield.3.stories.Sinhala.Dubed._._.Garfield.Sinhala.Cartoon.Dubed.Ep-1.mp4",
-        "https://github.com/Viruna2010/VIRU-TV/releases/download/v18.0/Garfield.Season.2-.7.mp4",
         "https://github.com/Viruna2010/VIRU-TV/releases/download/v19.0/Sura.Pappa.-.Wada.12.mp4",
-        "https://github.com/Viruna2010/VIRU-TV/releases/download/v20.0/Sutin.Matin.Kung.Fu.Kings.Cartoon.Movie.Full.HD.cartoon.sinhala.derana.mp4",
-        "https://github.com/Viruna2010/VIRU-TV/releases/download/v21.0/tin.tin.singhala.-.sinhala.cartoon.mp4",
-        "https://github.com/Viruna2010/VIRU-TV/releases/download/v22.0/Tintin.and.the.Temple.of.the.Sun.1969._.Sinhala.dubbed._.Full.movie.mp4",
-        "https://github.com/Viruna2010/VIRU-TV/releases/download/v23.0/videoplayback.1.mp4",
-        "https://github.com/Viruna2010/VIRU-TV/releases/download/v24.0/videoplayback.4.mp4",
-        "https://github.com/Viruna2010/VIRU-TV/releases/download/v25.0/-Full.Episode.mp4"
+        "https://github.com/Viruna2010/VIRU-TV/releases/download/v22.0/Tintin.and.the.Temple.of.the.Sun.1969._.Sinhala.dubbed._.Full.movie.mp4"
     ],
-    BANA: "https://github.com/Viruna2010/VIRU-TV/releases/download/v14.0/videoplayback.2.mp4",
+    // 6PM - 7PM බණ Shuffle ලිස්ට් එක 🙏
+    BANA: [
+        "https://github.com/Viruna2010/VIRU-TV/releases/download/v14.0/videoplayback.2.mp4",
+        "https://github.com/Viruna2010/VIRU-TV/releases/download/v39.0/videoplayback.1.mp4"
+    ],
     NATURE: "https://github.com/Viruna2010/VIRU-TV/releases/download/v4.0/1.Hour.Long.No.Copyright.video.__.Nature.and.music.mp4",
     DESHABIMANI: "https://github.com/Viruna2010/VIRU-TV/releases/download/v3.0/Uda.Gee._.Sinhala.Morning.Songs.Volume.01._.Sinhala.Song._.SinduManager.mp4"
 };
@@ -103,20 +95,19 @@ const startEngine = () => {
         isAdPlaying = true;
     } else {
         isAdPlaying = false;
-        // 00:00 - 08:00 Pirith
         if (hr >= 0 && hr < 8) {
             videoToPlay = (hr < 7 || (hr === 7 && min < 30)) ? PLAYLISTS.PIRYTH[0] : PLAYLISTS.PIRYTH[1];
         }
         else if (hr >= 8 && hr < 10) videoToPlay = getNextVideo('MORNING');
         else if (hr >= 10 && hr < 12) videoToPlay = getNextVideo('TRENDING');
         else if (hr >= 12 && hr < 14) videoToPlay = getNextVideo('COMEDY');
-        else if (hr === 14) videoToPlay = getNextVideo('REVIEWS'); // 2PM - 3PM
-        else if (hr === 15) videoToPlay = PLAYLISTS.KIDS_SONGS; // 3PM - 4PM ✅
-        else if (hr >= 16 && hr < 18) videoToPlay = getNextVideo('CARTOONS'); // 4PM - 6PM
-        else if (hr === 18) videoToPlay = PLAYLISTS.BANA;
+        else if (hr === 14) videoToPlay = getNextVideo('REVIEWS');
+        else if (hr === 15) videoToPlay = PLAYLISTS.KIDS_SONGS;
+        else if (hr >= 16 && hr < 18) videoToPlay = getNextVideo('CARTOONS');
+        else if (hr === 18) videoToPlay = getNextVideo('BANA'); // 6PM - 7PM Shuffle ✅
         else if (hr >= 19 && hr < 22) videoToPlay = getNextVideo('TRENDING');
-        else if (hr === 22) videoToPlay = PLAYLISTS.NATURE; // 10PM - 11PM 🌿
-        else if (hr === 23) videoToPlay = PLAYLISTS.DESHABIMANI; // 11PM - 12AM 🇱🇰
+        else if (hr === 22) videoToPlay = PLAYLISTS.NATURE;
+        else if (hr === 23) videoToPlay = PLAYLISTS.DESHABIMANI;
         else videoToPlay = PLAYLISTS.PIRYTH[0];
     }
 
