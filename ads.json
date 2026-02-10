@@ -1,0 +1,39 @@
+{
+  "active_ads": [
+    {
+      "id": 1,
+      "name": "Morning Ad",
+      "status": "off",
+      "time": "09:00",
+      "url": "https://link-to-ad1.mp4"
+    },
+    {
+      "id": 2,
+      "name": "Noon Ad",
+      "status": "off",
+      "time": "12:00",
+      "url": "https://link-to-ad2.mp4"
+    },
+    {
+      "id": 3,
+      "name": "Evening Ad",
+      "status": "off",
+      "time": "18:30",
+      "url": "https://link-to-ad3.mp4"
+    },
+    {
+      "id": 4,
+      "name": "Night Ad 1",
+      "status": "off",
+      "time": "20:00",
+      "url": "https://link-to-ad4.mp4"
+    },
+    {
+      "id": 5,
+      "name": "Night Ad 2",
+      "status": "off",
+      "time": "22:00",
+      "url": "https://link-to-ad5.mp4"
+    }
+  ]
+}
