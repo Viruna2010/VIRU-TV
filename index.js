@@ -1,14 +1,19 @@
 const { exec } = require('child_process');
 const express = require('express');
+const fs = require('fs'); 
 const app = express();
 
-app.get('/', (req, res) => res.send('Viru TV V47.0: Ultra Stable Mode Active! 🚀📡'));
+// Render එකේ සර්විස් එක Live පෙන්වන්න
+app.get('/', (req, res) => res.send('Viru TV V50.0: Precision Mode & JSON Ads Active! 🚀📡'));
 app.listen(process.env.PORT || 3000);
 
 const streamURL = "rtmp://a.rtmp.youtube.com/live2/";
 const streamKey = process.env.STREAM_KEY;
 let currentProcess = null;
+let currentlyPlayingCategory = ""; 
+let isAdPlaying = false; 
 
+// --- සියලුම වැඩසටහන් ලැයිස්තුව ---
 const PLAYLISTS = {
     PIRYTH: [
         "https://github.com/Viruna2010/VIRU-TV/releases/download/v1.0/Most.Powerful.Seth.Pirith.in.7.hours.-.7.mp4",
@@ -64,65 +69,102 @@ const PLAYLISTS = {
     KIDS_SONGS: "https://github.com/Viruna2010/VIRU-TV/releases/download/v38.0/01._.Sinhala.Kids.Songs._.Sinhala.Lama.Geetha.Ekathuwa._.Kids.Song.Collection.mp4"
 };
 
-// --- Time Fix (Ultra Accurate) ---
+// ශ්‍රී ලංකා වේලාව නිවැරදිව ලබා ගැනීම
 const getSLTime = () => {
     const d = new Date();
     const utc = d.getTime() + (d.getTimezoneOffset() * 60000);
-    const slTime = new Date(utc + (3600000 * 5.5)); // UTC+5.5
-    return { hr: slTime.getHours(), min: slTime.getMinutes() };
+    const slTime = new Date(utc + (3600000 * 5.5));
+    const full = slTime.getHours().toString().padStart(2, '0') + ":" + slTime.getMinutes().toString().padStart(2, '0');
+    return { hr: slTime.getHours(), min: slTime.getMinutes(), full: full };
 };
 
-const getNextVideo = (category) => {
-    const list = PLAYLISTS[category];
-    if (typeof list === 'string') return list;
-    return list[Math.floor(Math.random() * list.length)];
+// Ads.json එක චෙක් කර ඇඩ් එකක් තිබේදැයි බැලීම
+const checkScheduledAd = () => {
+    try {
+        if (!fs.existsSync('./ads.json')) return null;
+        const adsData = JSON.parse(fs.readFileSync('./ads.json', 'utf8'));
+        const { full } = getSLTime();
+        // වෙලාව ගැලපෙන සහ status "on" ඇඩ් එකක් සොයයි
+        return adsData.active_ads.find(ad => ad.time === full && ad.status === "on");
+    } catch (e) {
+        console.log("Ad Check Error:", e);
+        return null;
+    }
 };
 
-const startEngine = () => {
+// වේලාව අනුව ප්ලේ විය යුතු වැඩසටහන් කාණ්ඩය
+const getRequiredCategory = (hr, min) => {
+    if (hr >= 0 && hr < 8) return "PIRYTH";
+    if (hr >= 8 && hr < 10) return "MORNING";
+    if (hr >= 10 && hr < 12) return "TRENDING";
+    if (hr >= 12 && hr < 14) return "COMEDY";
+    if (hr === 14) return "REVIEWS";
+    if (hr === 15) return "KIDS_SONGS";
+    if (hr >= 16 && hr < 18) return "CARTOONS";
+    if (hr === 18) return "BANA";
+    if (hr >= 19 && hr < 22) return "TRENDING";
+    if (hr === 22) return "NATURE";
+    if (hr === 23) return "DESHABIMANI";
+    return "PIRYTH";
+};
+
+const startEngine = (adUrl = null) => {
     const { hr, min } = getSLTime();
     let videoToPlay;
 
-    if (hr >= 0 && hr < 8) videoToPlay = (hr < 7 || (hr === 7 && min < 30)) ? PLAYLISTS.PIRYTH[0] : PLAYLISTS.PIRYTH[1];
-    else if (hr >= 8 && hr < 10) videoToPlay = getNextVideo('MORNING');
-    else if (hr >= 10 && hr < 12) videoToPlay = getNextVideo('TRENDING');
-    else if (hr >= 12 && hr < 14) videoToPlay = getNextVideo('COMEDY');
-    else if (hr === 14) videoToPlay = getNextVideo('REVIEWS');
-    else if (hr === 15) videoToPlay = PLAYLISTS.KIDS_SONGS;
-    else if (hr >= 16 && hr < 18) videoToPlay = getNextVideo('CARTOONS');
-    else if (hr === 18) videoToPlay = getNextVideo('BANA');
-    else if (hr >= 19 && hr < 22) videoToPlay = getNextVideo('TRENDING');
-    else if (hr === 22) videoToPlay = PLAYLISTS.NATURE;
-    else if (hr === 23) videoToPlay = PLAYLISTS.DESHABIMANI;
-    else videoToPlay = PLAYLISTS.PIRYTH[0];
+    if (adUrl) {
+        videoToPlay = adUrl;
+        isAdPlaying = true;
+        currentlyPlayingCategory = "AD_BREAK";
+        console.log(`[${getSLTime().full}] 📺 AD PLAYING: ${videoToPlay}`);
+    } else {
+        isAdPlaying = false;
+        const category = getRequiredCategory(hr, min);
+        currentlyPlayingCategory = category;
+        
+        if (category === "PIRYTH") {
+            videoToPlay = (hr < 7 || (hr === 7 && min < 30)) ? PLAYLISTS.PIRYTH[0] : PLAYLISTS.PIRYTH[1];
+        } else {
+            const list = PLAYLISTS[category];
+            videoToPlay = typeof list === 'string' ? list : list[Math.floor(Math.random() * list.length)];
+        }
+        console.log(`[${getSLTime().full}] 🎬 PROGRAM: ${category} -> ${videoToPlay}`);
+    }
 
-    console.log(`[SL TIME ${hr}:${min}] 🎬 Engine Starting: ${videoToPlay}`);
-    
-    // Keyframe fix ඇතුළුව FFmpeg stable settings
     const ffmpegCmd = `ffmpeg -re -reconnect 1 -reconnect_at_eof 1 -reconnect_streamed 1 -reconnect_delay_max 5 -i "${videoToPlay}" -vcodec libx264 -preset ultrafast -tune zerolatency -g 36 -keyint_min 36 -b:v 280k -maxrate 320k -bufsize 600k -r 18 -s 640x360 -acodec aac -b:a 96k -f flv "${streamURL}${streamKey}"`;
     
     currentProcess = exec(ffmpegCmd);
     
-    // Process එක ඉවර වුණොත් විතරක් අලුතෙන් පටන් ගන්නවා
     currentProcess.on('close', (code) => {
-        console.log(`Stream process exited with code ${code}. Restarting...`);
+        console.log(`Stream exited. Restarting...`);
         currentProcess = null;
-        setTimeout(startEngine, 2000);
+        setTimeout(() => startEngine(), 1000);
     });
 };
 
-// පැය 12කට වරක් මුළු App එකම Restart වෙන්න සලස්වනවා (Memory cleanup)
+// --- Precision Logic (මාරු වීම් නිවැරදිව පාලනය) ---
 setInterval(() => {
-    console.log("Scheduled Restart for Stability...");
-    process.exit(0); 
-}, 43200000); 
+    const { hr, min, full } = getSLTime();
 
-// හැම පැයකම පටන් ගැන්මේදී වීඩියෝව මාරු කරන්න
-setInterval(() => {
-    const { min } = getSLTime();
-    if (min === 0 && currentProcess) {
-        console.log("Hourly transition. Switching video...");
+    // 1. ඇඩ් එකක් ප්ලේ වෙන්න වෙලාව හරිදැයි බලයි
+    const scheduledAd = checkScheduledAd();
+    if (scheduledAd && !isAdPlaying) {
+        console.log(`[ALERT] Ad Time Reached (${full}). Killing current stream.`);
+        if (currentProcess) currentProcess.kill('SIGKILL');
+        setTimeout(() => startEngine(scheduledAd.url), 2000);
+        return;
+    }
+
+    // 2. වැඩසටහන් කාණ්ඩය මාරු වී ඇත්දැයි බලයි (ඇඩ් එකක් යන්නේ නැත්නම් පමණයි)
+    const shouldBePlaying = getRequiredCategory(hr, min);
+    if (!isAdPlaying && currentlyPlayingCategory !== shouldBePlaying && currentProcess) {
+        console.log(`[ALERT] Schedule Change! Switching to ${shouldBePlaying}.`);
         currentProcess.kill('SIGKILL');
     }
-}, 60000);
+}, 30000); // තත්පර 30න් 30ට පරීක්ෂා කරයි
+
+// සර්වර් සෞඛ්‍යය සඳහා පැය 12කට වරක් රීස්ටාර්ට් කිරීම
+setInterval(() => { process.exit(0); }, 43200000); 
 
 if (streamKey) startEngine();
+else console.log("ERROR: STREAM_KEY missing!");
