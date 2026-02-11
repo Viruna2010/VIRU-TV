@@ -1,17 +1,13 @@
 const { exec } = require('child_process');
 const express = require('express');
-const fs = require('fs');
 const app = express();
 
-app.get('/', (req, res) => res.send('Viru TV V45.0: SL Time Fixed & Nature Mode Active! 🚀📡'));
+app.get('/', (req, res) => res.send('Viru TV V47.0: Ultra Stable Mode Active! 🚀📡'));
 app.listen(process.env.PORT || 3000);
 
 const streamURL = "rtmp://a.rtmp.youtube.com/live2/";
 const streamKey = process.env.STREAM_KEY;
 let currentProcess = null;
-let isAdPlaying = false;
-
-let playedHistory = { MORNING: [], TRENDING: [], CARTOONS: [], COMEDY: [], REVIEWS: [], BANA: [] };
 
 const PLAYLISTS = {
     PIRYTH: [
@@ -68,74 +64,65 @@ const PLAYLISTS = {
     KIDS_SONGS: "https://github.com/Viruna2010/VIRU-TV/releases/download/v38.0/01._.Sinhala.Kids.Songs._.Sinhala.Lama.Geetha.Ekathuwa._.Kids.Song.Collection.mp4"
 };
 
+// --- Time Fix (Ultra Accurate) ---
 const getSLTime = () => {
-    const now = new Date();
-    // UTC වෙලාවට පැය 5 කුයි විනාඩි 30 කුයි එකතු කරලා ලංකාවේ වෙලාව හදනවා
-    const slDate = new Date(now.getTime() + (now.getTimezoneOffset() * 60000) + (330 * 60000));
-    return { hr: slDate.getHours(), min: slDate.getMinutes() };
-};
-
-const getAdNow = () => {
-    try {
-        const { hr, min } = getSLTime();
-        const currentTime = `${hr.toString().padStart(2, '0')}:${min.toString().padStart(2, '0')}`;
-        if (fs.existsSync('./ads.json')) {
-            const adData = JSON.parse(fs.readFileSync('./ads.json', 'utf8'));
-            const currentAd = adData.active_ads.find(ad => ad.time === currentTime && ad.status === "on");
-            return currentAd ? currentAd.url : null;
-        }
-    } catch (e) { return null; }
-    return null;
+    const d = new Date();
+    const utc = d.getTime() + (d.getTimezoneOffset() * 60000);
+    const slTime = new Date(utc + (3600000 * 5.5)); // UTC+5.5
+    return { hr: slTime.getHours(), min: slTime.getMinutes() };
 };
 
 const getNextVideo = (category) => {
-    const fullList = PLAYLISTS[category];
-    if (typeof fullList === 'string') return fullList;
-    let available = fullList.filter(url => !playedHistory[category].includes(url));
-    if (available.length === 0) { playedHistory[category] = []; available = fullList; }
-    const selected = available[Math.floor(Math.random() * available.length)];
-    playedHistory[category].push(selected);
-    return selected;
+    const list = PLAYLISTS[category];
+    if (typeof list === 'string') return list;
+    return list[Math.floor(Math.random() * list.length)];
 };
 
 const startEngine = () => {
     const { hr, min } = getSLTime();
-    const adUrl = getAdNow();
     let videoToPlay;
 
-    if (adUrl && !isAdPlaying) {
-        videoToPlay = adUrl;
-        isAdPlaying = true;
-    } else {
-        isAdPlaying = false;
-        if (hr >= 0 && hr < 8) {
-            videoToPlay = (hr < 7 || (hr === 7 && min < 30)) ? PLAYLISTS.PIRYTH[0] : PLAYLISTS.PIRYTH[1];
-        }
-        else if (hr >= 8 && hr < 10) videoToPlay = getNextVideo('MORNING');
-        else if (hr >= 10 && hr < 12) videoToPlay = getNextVideo('TRENDING');
-        else if (hr >= 12 && hr < 14) videoToPlay = getNextVideo('COMEDY');
-        else if (hr === 14) videoToPlay = getNextVideo('REVIEWS');
-        else if (hr === 15) videoToPlay = PLAYLISTS.KIDS_SONGS;
-        else if (hr >= 16 && hr < 18) videoToPlay = getNextVideo('CARTOONS');
-        else if (hr === 18) videoToPlay = getNextVideo('BANA');
-        else if (hr >= 19 && hr < 22) videoToPlay = getNextVideo('TRENDING');
-        else if (hr === 22) videoToPlay = PLAYLISTS.NATURE;
-        else if (hr === 23) videoToPlay = PLAYLISTS.DESHABIMANI;
-        else videoToPlay = PLAYLISTS.PIRYTH[0];
-    }
+    if (hr >= 0 && hr < 8) videoToPlay = (hr < 7 || (hr === 7 && min < 30)) ? PLAYLISTS.PIRYTH[0] : PLAYLISTS.PIRYTH[1];
+    else if (hr >= 8 && hr < 10) videoToPlay = getNextVideo('MORNING');
+    else if (hr >= 10 && hr < 12) videoToPlay = getNextVideo('TRENDING');
+    else if (hr >= 12 && hr < 14) videoToPlay = getNextVideo('COMEDY');
+    else if (hr === 14) videoToPlay = getNextVideo('REVIEWS');
+    else if (hr === 15) videoToPlay = PLAYLISTS.KIDS_SONGS;
+    else if (hr >= 16 && hr < 18) videoToPlay = getNextVideo('CARTOONS');
+    else if (hr === 18) videoToPlay = getNextVideo('BANA');
+    else if (hr >= 19 && hr < 22) videoToPlay = getNextVideo('TRENDING');
+    else if (hr === 22) videoToPlay = PLAYLISTS.NATURE;
+    else if (hr === 23) videoToPlay = PLAYLISTS.DESHABIMANI;
+    else videoToPlay = PLAYLISTS.PIRYTH[0];
 
-    console.log(`[SL TIME ${hr}:${min}] 🎬 Engine Playing: ${videoToPlay}`);
+    console.log(`[SL TIME ${hr}:${min}] 🎬 Engine Starting: ${videoToPlay}`);
+    
+    // Keyframe fix ඇතුළුව FFmpeg stable settings
     const ffmpegCmd = `ffmpeg -re -reconnect 1 -reconnect_at_eof 1 -reconnect_streamed 1 -reconnect_delay_max 5 -i "${videoToPlay}" -vcodec libx264 -preset ultrafast -tune zerolatency -g 36 -keyint_min 36 -b:v 280k -maxrate 320k -bufsize 600k -r 18 -s 640x360 -acodec aac -b:a 96k -f flv "${streamURL}${streamKey}"`;
     
     currentProcess = exec(ffmpegCmd);
-    currentProcess.on('close', () => setTimeout(startEngine, 1000));
+    
+    // Process එක ඉවර වුණොත් විතරක් අලුතෙන් පටන් ගන්නවා
+    currentProcess.on('close', (code) => {
+        console.log(`Stream process exited with code ${code}. Restarting...`);
+        currentProcess = null;
+        setTimeout(startEngine, 2000);
+    });
 };
 
+// පැය 12කට වරක් මුළු App එකම Restart වෙන්න සලස්වනවා (Memory cleanup)
 setInterval(() => {
-    const adUrl = getAdNow();
-    if ((adUrl && !isAdPlaying) || getSLTime().min === 0) {
-        if (currentProcess) currentProcess.kill('SIGKILL');
+    console.log("Scheduled Restart for Stability...");
+    process.exit(0); 
+}, 43200000); 
+
+// හැම පැයකම පටන් ගැන්මේදී වීඩියෝව මාරු කරන්න
+setInterval(() => {
+    const { min } = getSLTime();
+    if (min === 0 && currentProcess) {
+        console.log("Hourly transition. Switching video...");
+        currentProcess.kill('SIGKILL');
     }
-}, 50000);
+}, 60000);
 
 if (streamKey) startEngine();
