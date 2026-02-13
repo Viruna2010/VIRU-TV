@@ -1,89 +1,144 @@
 const { exec } = require('child_process');
 const express = require('express');
+const fs = require('fs'); 
 const app = express();
 
-app.get('/', (req, res) => res.send('Viru TV: V13.1 Final Engine is ONLINE! 🚀📡'));
-app.listen(process.env.PORT || 3000);
+const PORT = process.env.PORT || 10000;
+app.get('/', (req, res) => res.send('Viru TV V53.3: 39 Videos + Ads + Filters! 🚀📡'));
+app.listen(PORT, () => console.log(`Viru TV running on port ${PORT}`));
 
 const streamURL = "rtmp://a.rtmp.youtube.com/live2/";
 const streamKey = process.env.STREAM_KEY;
 let currentProcess = null;
+let currentlyPlayingCategory = ""; 
+let isAdPlaying = false;
 
-// ================= [ VIRU TV MASTER PLAYLIST ] =================
-
-const PIRYTH = [
-    "https://github.com/Viruna2010/VIRU-TV/releases/download/v1.0/Most.Powerful.Seth.Pirith.in.7.hours.-.7.mp4",
-    "https://github.com/Viruna2010/VIRU-TV/releases/download/v2.0/Seth.pirith._._.mp4"
-];
-
-const MORNING_SHOW = [
-    "https://github.com/Viruna2010/VIRU-TV/releases/download/v10.0/I.am.grateful._.Morning.Affirmation._.Jayspot.Productions._.432.Hertz.mp4",
-    "https://github.com/Viruna2010/VIRU-TV/releases/download/v11.0/Laziness.-.Sinhala.Motivational.Video.mp4",
-    "https://github.com/Viruna2010/VIRU-TV/releases/download/v12.0/Sinhala.Motivation.-.Exam.Addiction.Motivation.-.mp4",
-    "https://github.com/Viruna2010/VIRU-TV/releases/download/v13.0/FOCUS._._.Sinhala.Motivational.Video._.Jayspot.mp4"
-];
-
-const TRENDING_SONGS = [
-    "https://github.com/Viruna2010/VIRU-TV/releases/download/v6.0/videoplayback.mp4", 
-    "https://github.com/Viruna2010/VIRU-TV/releases/download/v5.0/New.Trending.Sinhala.Remix.Collection.Trending.Sinhala.Songs.PlayList.-.Oshana.Alahakoon.240p.h264.mp4",
-    "https://github.com/Viruna2010/VIRU-TV/releases/download/v7.0/YTDown.com_YouTube_Media_C18ClAT_aQ4_002_240p.mp4",
-    "https://github.com/Viruna2010/VIRU-TV/releases/download/v8.0/Trending.Sinhala.Band.Nonstop.Sinhala.Sindu.Best.New.Sinhala.Songs.Collection.Shaa.Beats.-.Shaa.Beats.240p.h264.mp4",
-    "https://github.com/Viruna2010/VIRU-TV/releases/download/v9.0/YTDown.com_YouTube_Media_CB7wj-jy0o0_004_240p.mp4"
-];
-
-// අලුත් බණ වීඩියෝ එක (හවස 6 - 7)
-const EVENING_BANA = "https://github.com/Viruna2010/VIRU-TV/releases/download/v14.0/videoplayback.2.mp4";
-
-const NATURE = "https://github.com/Viruna2010/VIRU-TV/releases/download/v4.0/1.Hour.Long.No.Copyright.video.__.Nature.and.music.mp4";
-const DESHABIMANI = "https://github.com/Viruna2010/VIRU-TV/releases/download/v3.0/Uda.Gee._.Sinhala.Morning.Songs.Volume.01._.Sinhala.Song._.SinduManager.mp4";
-
-// ===============================================================
-
-const getSLTime = () => {
-    const slTime = new Date(new Date().toLocaleString("en-US", {timeZone: "Asia/Colombo"}));
-    return { hr: slTime.getHours(), min: slTime.getMinutes() };
+const PLAYLISTS = {
+    PIRYTH: [
+        "https://github.com/Viruna2010/VIRU-TV/releases/download/v1.0/Most.Powerful.Seth.Pirith.in.7.hours.-.7.mp4",
+        "https://github.com/Viruna2010/VIRU-TV/releases/download/v2.0/Seth.pirith._._.mp4"
+    ],
+    DESHABIMANI: "https://github.com/Viruna2010/VIRU-TV/releases/download/v3.0/Uda.Gee._.Sinhala.Morning.Songs.Volume.01._.Sinhala.Song._.SinduManager.mp4",
+    NATURE: "https://github.com/Viruna2010/VIRU-TV/releases/download/v4.0/1.Hour.Long.No.Copyright.video.__.Nature.and.music.mp4",
+    TRENDING: [
+        "https://github.com/Viruna2010/VIRU-TV/releases/download/v5.0/New.Trending.Sinhala.Remix.Collection.Trending.Sinhala.Songs.PlayList.-.Oshana.Alahakoon.240p.h264.mp4",
+        "https://github.com/Viruna2010/VIRU-TV/releases/download/v6.0/videoplayback.mp4",
+        "https://github.com/Viruna2010/VIRU-TV/releases/download/v7.0/YTDown.com_YouTube_Media_C18ClAT_aQ4_002_240p.mp4",
+        "https://github.com/Viruna2010/VIRU-TV/releases/download/v8.0/Trending.Sinhala.Band.Nonstop.Sinhala.Sindu.Best.New.Sinhala.Songs.Collection.Shaa.Beats.240p.h264.mp4",
+        "https://github.com/Viruna2010/VIRU-TV/releases/download/v9.0/YTDown.com_YouTube_Media_CB7wj-jy0o0_004_240p.mp4"
+    ],
+    MORNING: [
+        "https://github.com/Viruna2010/VIRU-TV/releases/download/v10.0/I.am.grateful._.Morning.Affirmation._.Jayspot.Productions._.432.Hertz.mp4",
+        "https://github.com/Viruna2010/VIRU-TV/releases/download/v11.0/Laziness.-.Sinhala.Motivational.Video.mp4",
+        "https://github.com/Viruna2010/VIRU-TV/releases/download/v12.0/Sinhala.Motivation.-.Exam.Addiction.Motivation.-.mp4",
+        "https://github.com/Viruna2010/VIRU-TV/releases/download/v13.0/FOCUS._._.Sinhala.Motivational.Video._.Jayspot.mp4"
+    ],
+    BANA: [
+        "https://github.com/Viruna2010/VIRU-TV/releases/download/v14.0/videoplayback.2.mp4",
+        "https://github.com/Viruna2010/VIRU-TV/releases/download/v39.0/videoplayback.1.mp4",
+        "https://github.com/Viruna2010/VIRU-TV/releases/download/v40.0/_._.Venerable.Welimada.Saddaseela.Thero.mp4"
+    ],
+    CARTOONS: [
+        "https://github.com/Viruna2010/VIRU-TV/releases/download/v15.0/Chuttai.Chutti.Sinhala.Cartoon.__.__.The.Disables.__.sinhalacartoon.mp4",
+        "https://github.com/Viruna2010/VIRU-TV/releases/download/v16.0/Dangharawaliga.__.__.Marsupilamiyai.__.sinhalacartoon.mp4",
+        "https://github.com/Viruna2010/VIRU-TV/releases/download/v17/garfield.3.stories.Sinhala.Dubed._._.Garfield.Sinhala.Cartoon.Dubed.Ep-1.mp4",
+        "https://github.com/Viruna2010/VIRU-TV/releases/download/v18.0/Garfield.Season.2-.7.mp4",
+        "https://github.com/Viruna2010/VIRU-TV/releases/download/v19.0/Sura.Pappa.-.Wada.12.mp4",
+        "https://github.com/Viruna2010/VIRU-TV/releases/download/v20.0/Sutin.Matin.Kung.Fu.Kings.Cartoon.Movie.Full.HD.cartoon.sinhala.derana.mp4",
+        "https://github.com/Viruna2010/VIRU-TV/releases/download/v21.0/tin.tin.singhala.-.sinhala.cartoon.mp4",
+        "https://github.com/Viruna2010/VIRU-TV/releases/download/v22.0/Tintin.and.the.Temple.of.the.Sun.1969._.Sinhala.dubbed._.Full.movie.mp4",
+        "https://github.com/Viruna2010/VIRU-TV/releases/download/v23.0/videoplayback.1.mp4",
+        "https://github.com/Viruna2010/VIRU-TV/releases/download/v24.0/videoplayback.4.mp4",
+        "https://github.com/Viruna2010/VIRU-TV/releases/download/v25.0/-Full.Episode.mp4"
+    ],
+    COMEDY: [
+        "https://github.com/Viruna2010/VIRU-TV/releases/download/v26.0/1.Hour.Extreme.Try.Not.To.Laughing.Compilation.memecompilation.mp4",
+        "https://github.com/Viruna2010/VIRU-TV/releases/download/v27.0/1.Hour.Funniest.Animals.2023.Funny.Dog.Videos.Compilation.mp4",
+        "https://github.com/Viruna2010/VIRU-TV/releases/download/v28.0/Funny.Animals.Videos.-.Funny.Pets.Videos.2021.-.Funniest.Animals.Video.Compilation.of.2021.mp4",
+        "https://github.com/Viruna2010/VIRU-TV/releases/download/v29.0/Funny.dog.videos.Funny.dogs.fails.Cute.dogs.Funny.dogs.compilation.Best.dog.vines.mp4",
+        "https://github.com/Viruna2010/VIRU-TV/releases/download/v30.0/ONE.HOUR_.TRY.NOT.TO.LAUGH.CHALLENGE.Funny.Pranks.Videos.and.Scare.Cam.Fails.for.2023.mp4"
+    ],
+    REVIEWS: [
+        "https://github.com/Viruna2010/VIRU-TV/releases/download/v31.0/Spider.man.2.in.Sinhala.review.full.movie.DOCTOR.OCTOPUS.MineVoice.MAX.mp4",
+        "https://github.com/Viruna2010/VIRU-TV/releases/download/v32.0/videoplayback.mp4",
+        "https://github.com/Viruna2010/VIRU-TV/releases/download/v33.0/_.DEAD.SILENCE._.DEAD.SILENCE.MOVIE.EXPLAINED.IN.SINHALA.mp4",
+        "https://github.com/Viruna2010/VIRU-TV/releases/download/v35.0/full.Movie.review.in.Sinhala._.films.in.Sinhala_.Adventure.Thrilling.Horror.Movie.mp4",
+        "https://github.com/Viruna2010/VIRU-TV/releases/download/v36.0/_.HORROR.MOVIE.SINHALA.REVIEW.mp4",
+        "https://github.com/Viruna2010/VIRU-TV/releases/download/v37.0/_._.English.vinglish._Hiccup.Sinhala.Cinema_.Sinhala.movie.review.mp4"
+    ],
+    KIDS_SONGS: "https://github.com/Viruna2010/VIRU-TV/releases/download/v38.0/01._.Sinhala.Kids.Songs._.Sinhala.Lama.Geetha.Ekathuwa._.Kids.Song.Collection.mp4"
 };
 
-const startEngine = () => {
+const getSLTime = () => {
+    const d = new Date();
+    const utc = d.getTime() + (d.getTimezoneOffset() * 60000);
+    const slTime = new Date(utc + (3600000 * 5.5));
+    const full = slTime.getHours().toString().padStart(2, '0') + ":" + slTime.getMinutes().toString().padStart(2, '0');
+    return { hr: slTime.getHours(), min: slTime.getMinutes(), full: full };
+};
+
+const checkScheduledAd = () => {
+    try {
+        if (!fs.existsSync('./ads.json')) return null;
+        const adsData = JSON.parse(fs.readFileSync('./ads.json', 'utf8'));
+        const { full } = getSLTime();
+        return adsData.active_ads.find(ad => ad.time === full && ad.status === "on");
+    } catch (e) { return null; }
+};
+
+const getRequiredCategory = (hr) => {
+    if (hr >= 0 && hr < 8) return "PIRYTH";
+    if (hr >= 8 && hr < 10) return "MORNING";
+    if (hr >= 10 && hr < 12) return "TRENDING";
+    if (hr >= 12 && hr < 14) return "COMEDY";
+    if (hr === 14) return "REVIEWS";
+    if (hr === 15) return "KIDS_SONGS";
+    if (hr >= 16 && hr < 18) return "CARTOONS";
+    if (hr === 18) return "BANA";
+    if (hr >= 19 && hr < 22) return "TRENDING";
+    if (hr === 22) return "NATURE";
+    if (hr === 23) return "DESHABIMANI";
+    return "PIRYTH";
+};
+
+const startEngine = (adUrl = null) => {
     const { hr, min } = getSLTime();
-    let videoToPlay = NATURE;
+    let videoToPlay;
 
-    if (hr >= 0 && hr < 8) {
-        videoToPlay = (hr < 7 || (hr === 7 && min < 30)) ? PIRYTH[0] : PIRYTH[1];
-    } 
-    else if (hr >= 8 && hr < 10) {
-        videoToPlay = MORNING_SHOW[Math.floor(Math.random() * MORNING_SHOW.length)];
-    }
-    else if (hr >= 10 && hr < 18) {
-        videoToPlay = TRENDING_SONGS[Math.floor(Math.random() * TRENDING_SONGS.length)];
-    }
-    else if (hr === 18) { 
-        // හවස 6:00 - 6:59 දක්වා බණ ප්ලේ වේ
-        videoToPlay = EVENING_BANA;
-    }
-    else if (hr >= 19 && hr < 22) {
-        videoToPlay = TRENDING_SONGS[Math.floor(Math.random() * TRENDING_SONGS.length)];
-    }
-    else if (hr >= 22 && hr < 23) {
-        videoToPlay = NATURE;
-    }
-    else if (hr >= 23 && hr < 24) {
-        videoToPlay = DESHABIMANI;
+    if (adUrl) {
+        videoToPlay = adUrl;
+        isAdPlaying = true;
+        currentlyPlayingCategory = "AD_BREAK";
+    } else {
+        isAdPlaying = false;
+        const category = getRequiredCategory(hr);
+        currentlyPlayingCategory = category;
+        const list = PLAYLISTS[category];
+        videoToPlay = typeof list === 'string' ? list : list[Math.floor(Math.random() * list.length)];
     }
 
-    console.log(`[${hr}:${min}] Playing: ${videoToPlay}`);
+    console.log(`[${hr}:${min}] 🎬 PLAYING: ${currentlyPlayingCategory}`);
 
-    const ffmpegCmd = `ffmpeg -re -reconnect 1 -reconnect_at_eof 1 -reconnect_streamed 1 -reconnect_delay_max 5 -i "${videoToPlay}" -vcodec libx264 -preset ultrafast -b:v 400k -maxrate 450k -bufsize 900k -r 20 -s 640x360 -g 40 -acodec aac -b:a 128k -ar 44100 -f flv "${streamURL}${streamKey}"`;
-
+    const ffmpegCmd = `ffmpeg -re -reconnect 1 -reconnect_at_eof 1 -reconnect_streamed 1 -reconnect_delay_max 5 -i "${videoToPlay}" -vf "scale=640:360,setpts=0.98*PTS" -vcodec libx264 -preset ultrafast -tune zerolatency -g 36 -b:v 300k -r 18 -acodec aac -af "atempo=1.02" -b:a 96k -f flv "${streamURL}${streamKey}"`;
+    
     currentProcess = exec(ffmpegCmd);
-    currentProcess.on('close', () => setTimeout(startEngine, 1000));
+    currentProcess.on('close', () => {
+        currentProcess = null;
+        setTimeout(() => startEngine(), 1000);
+    });
 };
 
 setInterval(() => {
-    const { hr, min } = getSLTime();
-    // පැය මාරු වෙද්දී වීඩියෝ එක මාරු කිරීම
-    if (min === 0) {
+    const { hr } = getSLTime();
+    const ad = checkScheduledAd();
+    if (ad && !isAdPlaying) {
         if (currentProcess) currentProcess.kill('SIGKILL');
+        setTimeout(() => startEngine(ad.url), 2000);
+        return;
+    }
+    const shouldBe = getRequiredCategory(hr);
+    if (!isAdPlaying && currentlyPlayingCategory !== shouldBe && currentProcess) {
+        currentProcess.kill('SIGKILL');
     }
 }, 60000);
 
