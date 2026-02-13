@@ -4,7 +4,7 @@ const fs = require('fs');
 const app = express();
 
 const PORT = process.env.PORT || 10000;
-app.get('/', (req, res) => res.send('Viru TV V53.5: Lightning Fast Switch Mode! ⚡📡'));
+app.get('/', (req, res) => res.send('Viru TV V53.6: Fixed Lightning Switch & 39 Videos! 🚀📡'));
 app.listen(PORT, () => console.log(`Viru TV running on port ${PORT}`));
 
 const streamURL = "rtmp://a.rtmp.youtube.com/live2/";
@@ -12,6 +12,7 @@ const streamKey = process.env.STREAM_KEY;
 let currentProcess = null;
 let currentlyPlayingCategory = ""; 
 let isAdPlaying = false;
+let isSwitching = false; 
 
 const PLAYLISTS = {
     PIRYTH: [
@@ -117,32 +118,36 @@ const startEngine = (adUrl = null) => {
         videoToPlay = typeof list === 'string' ? list : list[Math.floor(Math.random() * list.length)];
     }
 
-    console.log(`[${hr}:${min}] ⚡ ENGINE START: ${currentlyPlayingCategory}`);
+    console.log(`[${hr}:${min}] 🎬 NOW PLAYING: ${currentlyPlayingCategory}`);
+    isSwitching = false; 
 
     const ffmpegCmd = `ffmpeg -re -reconnect 1 -reconnect_at_eof 1 -reconnect_streamed 1 -reconnect_delay_max 5 -i "${videoToPlay}" -vf "scale=640:360,setpts=0.98*PTS" -vcodec libx264 -preset ultrafast -tune zerolatency -g 36 -b:v 300k -r 18 -acodec aac -af "atempo=1.02" -b:a 96k -f flv "${streamURL}${streamKey}"`;
     
     currentProcess = exec(ffmpegCmd);
     currentProcess.on('close', () => {
         currentProcess = null;
-        setTimeout(() => startEngine(), 1000);
+        if (!isSwitching) setTimeout(() => startEngine(), 1000);
     });
 };
 
-// ⚡ Check every 5 seconds for pinpoint accuracy
 setInterval(() => {
     const { hr } = getSLTime();
     const ad = checkScheduledAd();
     
-    if (ad && !isAdPlaying) {
-        console.log("⚡ [AD TRIGGER] Switching to AD break!");
+    if (ad && !isAdPlaying && !isSwitching) {
+        isSwitching = true;
+        console.log("⚡ [AD TRIGGER] Switching to AD Break...");
         if (currentProcess) currentProcess.kill('SIGKILL');
+        setTimeout(() => startEngine(ad.url), 2000);
         return;
     }
     
     const shouldBe = getRequiredCategory(hr);
-    if (!isAdPlaying && currentlyPlayingCategory !== shouldBe && currentProcess) {
-        console.log(`⚡ [SCHEDULE] Switching ${currentlyPlayingCategory} -> ${shouldBe}`);
-        currentProcess.kill('SIGKILL');
+    if (!isAdPlaying && currentlyPlayingCategory !== shouldBe && currentProcess && !isSwitching) {
+        isSwitching = true; 
+        console.log(`⚡ [SCHEDULE] Switching to ${shouldBe}`);
+        if (currentProcess) currentProcess.kill('SIGKILL');
+        setTimeout(() => startEngine(), 2000);
     }
 }, 5000);
 
