@@ -3,17 +3,16 @@ const express = require('express');
 const fs = require('fs'); 
 const app = express();
 
-// Render එකේ සර්විස් එක Live පෙන්වන්න
-app.get('/', (req, res) => res.send('Viru TV V50.0: Precision Mode & JSON Ads Active! 🚀📡'));
-app.listen(process.env.PORT || 3000);
+const PORT = process.env.PORT || 10000;
+app.get('/', (req, res) => res.send('Viru TV V53.3: 39 Videos + Ads + Filters! 🚀📡'));
+app.listen(PORT, () => console.log(`Viru TV running on port ${PORT}`));
 
 const streamURL = "rtmp://a.rtmp.youtube.com/live2/";
 const streamKey = process.env.STREAM_KEY;
 let currentProcess = null;
 let currentlyPlayingCategory = ""; 
-let isAdPlaying = false; 
+let isAdPlaying = false;
 
-// --- සියලුම වැඩසටහන් ලැයිස්තුව ---
 const PLAYLISTS = {
     PIRYTH: [
         "https://github.com/Viruna2010/VIRU-TV/releases/download/v1.0/Most.Powerful.Seth.Pirith.in.7.hours.-.7.mp4",
@@ -36,7 +35,8 @@ const PLAYLISTS = {
     ],
     BANA: [
         "https://github.com/Viruna2010/VIRU-TV/releases/download/v14.0/videoplayback.2.mp4",
-        "https://github.com/Viruna2010/VIRU-TV/releases/download/v39.0/videoplayback.1.mp4"
+        "https://github.com/Viruna2010/VIRU-TV/releases/download/v39.0/videoplayback.1.mp4",
+        "https://github.com/Viruna2010/VIRU-TV/releases/download/v40.0/_._.Venerable.Welimada.Saddaseela.Thero.mp4"
     ],
     CARTOONS: [
         "https://github.com/Viruna2010/VIRU-TV/releases/download/v15.0/Chuttai.Chutti.Sinhala.Cartoon.__.__.The.Disables.__.sinhalacartoon.mp4",
@@ -69,7 +69,6 @@ const PLAYLISTS = {
     KIDS_SONGS: "https://github.com/Viruna2010/VIRU-TV/releases/download/v38.0/01._.Sinhala.Kids.Songs._.Sinhala.Lama.Geetha.Ekathuwa._.Kids.Song.Collection.mp4"
 };
 
-// ශ්‍රී ලංකා වේලාව නිවැරදිව ලබා ගැනීම
 const getSLTime = () => {
     const d = new Date();
     const utc = d.getTime() + (d.getTimezoneOffset() * 60000);
@@ -78,22 +77,16 @@ const getSLTime = () => {
     return { hr: slTime.getHours(), min: slTime.getMinutes(), full: full };
 };
 
-// Ads.json එක චෙක් කර ඇඩ් එකක් තිබේදැයි බැලීම
 const checkScheduledAd = () => {
     try {
         if (!fs.existsSync('./ads.json')) return null;
         const adsData = JSON.parse(fs.readFileSync('./ads.json', 'utf8'));
         const { full } = getSLTime();
-        // වෙලාව ගැලපෙන සහ status "on" ඇඩ් එකක් සොයයි
         return adsData.active_ads.find(ad => ad.time === full && ad.status === "on");
-    } catch (e) {
-        console.log("Ad Check Error:", e);
-        return null;
-    }
+    } catch (e) { return null; }
 };
 
-// වේලාව අනුව ප්ලේ විය යුතු වැඩසටහන් කාණ්ඩය
-const getRequiredCategory = (hr, min) => {
+const getRequiredCategory = (hr) => {
     if (hr >= 0 && hr < 8) return "PIRYTH";
     if (hr >= 8 && hr < 10) return "MORNING";
     if (hr >= 10 && hr < 12) return "TRENDING";
@@ -116,55 +109,37 @@ const startEngine = (adUrl = null) => {
         videoToPlay = adUrl;
         isAdPlaying = true;
         currentlyPlayingCategory = "AD_BREAK";
-        console.log(`[${getSLTime().full}] 📺 AD PLAYING: ${videoToPlay}`);
     } else {
         isAdPlaying = false;
-        const category = getRequiredCategory(hr, min);
+        const category = getRequiredCategory(hr);
         currentlyPlayingCategory = category;
-        
-        if (category === "PIRYTH") {
-            videoToPlay = (hr < 7 || (hr === 7 && min < 30)) ? PLAYLISTS.PIRYTH[0] : PLAYLISTS.PIRYTH[1];
-        } else {
-            const list = PLAYLISTS[category];
-            videoToPlay = typeof list === 'string' ? list : list[Math.floor(Math.random() * list.length)];
-        }
-        console.log(`[${getSLTime().full}] 🎬 PROGRAM: ${category} -> ${videoToPlay}`);
+        const list = PLAYLISTS[category];
+        videoToPlay = typeof list === 'string' ? list : list[Math.floor(Math.random() * list.length)];
     }
 
-    const ffmpegCmd = `ffmpeg -re -reconnect 1 -reconnect_at_eof 1 -reconnect_streamed 1 -reconnect_delay_max 5 -i "${videoToPlay}" -vcodec libx264 -preset ultrafast -tune zerolatency -g 36 -keyint_min 36 -b:v 280k -maxrate 320k -bufsize 600k -r 18 -s 640x360 -acodec aac -b:a 96k -f flv "${streamURL}${streamKey}"`;
+    console.log(`[${hr}:${min}] 🎬 PLAYING: ${currentlyPlayingCategory}`);
+
+    const ffmpegCmd = `ffmpeg -re -reconnect 1 -reconnect_at_eof 1 -reconnect_streamed 1 -reconnect_delay_max 5 -i "${videoToPlay}" -vf "scale=640:360,setpts=0.98*PTS" -vcodec libx264 -preset ultrafast -tune zerolatency -g 36 -b:v 300k -r 18 -acodec aac -af "atempo=1.02" -b:a 96k -f flv "${streamURL}${streamKey}"`;
     
     currentProcess = exec(ffmpegCmd);
-    
-    currentProcess.on('close', (code) => {
-        console.log(`Stream exited. Restarting...`);
+    currentProcess.on('close', () => {
         currentProcess = null;
         setTimeout(() => startEngine(), 1000);
     });
 };
 
-// --- Precision Logic (මාරු වීම් නිවැරදිව පාලනය) ---
 setInterval(() => {
-    const { hr, min, full } = getSLTime();
-
-    // 1. ඇඩ් එකක් ප්ලේ වෙන්න වෙලාව හරිදැයි බලයි
-    const scheduledAd = checkScheduledAd();
-    if (scheduledAd && !isAdPlaying) {
-        console.log(`[ALERT] Ad Time Reached (${full}). Killing current stream.`);
+    const { hr } = getSLTime();
+    const ad = checkScheduledAd();
+    if (ad && !isAdPlaying) {
         if (currentProcess) currentProcess.kill('SIGKILL');
-        setTimeout(() => startEngine(scheduledAd.url), 2000);
+        setTimeout(() => startEngine(ad.url), 2000);
         return;
     }
-
-    // 2. වැඩසටහන් කාණ්ඩය මාරු වී ඇත්දැයි බලයි (ඇඩ් එකක් යන්නේ නැත්නම් පමණයි)
-    const shouldBePlaying = getRequiredCategory(hr, min);
-    if (!isAdPlaying && currentlyPlayingCategory !== shouldBePlaying && currentProcess) {
-        console.log(`[ALERT] Schedule Change! Switching to ${shouldBePlaying}.`);
+    const shouldBe = getRequiredCategory(hr);
+    if (!isAdPlaying && currentlyPlayingCategory !== shouldBe && currentProcess) {
         currentProcess.kill('SIGKILL');
     }
-}, 30000); // තත්පර 30න් 30ට පරීක්ෂා කරයි
-
-// සර්වර් සෞඛ්‍යය සඳහා පැය 12කට වරක් රීස්ටාර්ට් කිරීම
-setInterval(() => { process.exit(0); }, 43200000); 
+}, 60000);
 
 if (streamKey) startEngine();
-else console.log("ERROR: STREAM_KEY missing!");
