@@ -4,7 +4,7 @@ const fs = require('fs');
 const app = express();
 
 const PORT = process.env.PORT || 10000;
-app.get('/', (req, res) => res.send('Viru TV V53.3: 39 Videos + Ads + Filters! 🚀📡'));
+app.get('/', (req, res) => res.send('Viru TV V53.5: Lightning Fast Switch Mode! ⚡📡'));
 app.listen(PORT, () => console.log(`Viru TV running on port ${PORT}`));
 
 const streamURL = "rtmp://a.rtmp.youtube.com/live2/";
@@ -117,7 +117,7 @@ const startEngine = (adUrl = null) => {
         videoToPlay = typeof list === 'string' ? list : list[Math.floor(Math.random() * list.length)];
     }
 
-    console.log(`[${hr}:${min}] 🎬 PLAYING: ${currentlyPlayingCategory}`);
+    console.log(`[${hr}:${min}] ⚡ ENGINE START: ${currentlyPlayingCategory}`);
 
     const ffmpegCmd = `ffmpeg -re -reconnect 1 -reconnect_at_eof 1 -reconnect_streamed 1 -reconnect_delay_max 5 -i "${videoToPlay}" -vf "scale=640:360,setpts=0.98*PTS" -vcodec libx264 -preset ultrafast -tune zerolatency -g 36 -b:v 300k -r 18 -acodec aac -af "atempo=1.02" -b:a 96k -f flv "${streamURL}${streamKey}"`;
     
@@ -128,18 +128,22 @@ const startEngine = (adUrl = null) => {
     });
 };
 
+// ⚡ Check every 5 seconds for pinpoint accuracy
 setInterval(() => {
     const { hr } = getSLTime();
     const ad = checkScheduledAd();
+    
     if (ad && !isAdPlaying) {
+        console.log("⚡ [AD TRIGGER] Switching to AD break!");
         if (currentProcess) currentProcess.kill('SIGKILL');
-        setTimeout(() => startEngine(ad.url), 2000);
         return;
     }
+    
     const shouldBe = getRequiredCategory(hr);
     if (!isAdPlaying && currentlyPlayingCategory !== shouldBe && currentProcess) {
+        console.log(`⚡ [SCHEDULE] Switching ${currentlyPlayingCategory} -> ${shouldBe}`);
         currentProcess.kill('SIGKILL');
     }
-}, 60000);
+}, 5000);
 
 if (streamKey) startEngine();
