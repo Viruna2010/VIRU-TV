@@ -4,13 +4,14 @@ const fs = require('fs');
 const app = express();
 
 const PORT = process.env.PORT || 10000;
-app.get('/', (req, res) => res.send('Viru TV V54.8: Cartoon Testing Mode! 🚀📡'));
+app.get('/', (req, res) => res.send('Viru TV V53.6: Safety Mode - No Cartoons! 🚀📡'));
 app.listen(PORT, () => console.log(`Viru TV running on port ${PORT}`));
 
 const streamURL = "rtmp://a.rtmp.youtube.com/live2/";
 const streamKey = process.env.STREAM_KEY;
 let currentProcess = null;
 let currentlyPlayingCategory = ""; 
+let isAdPlaying = false;
 let isSwitching = false; 
 
 const PLAYLISTS = {
@@ -38,9 +39,7 @@ const PLAYLISTS = {
         "https://github.com/Viruna2010/VIRU-TV/releases/download/v39.0/videoplayback.1.mp4",
         "https://github.com/Viruna2010/VIRU-TV/releases/download/v40.0/_._.Venerable.Welimada.Saddaseela.Thero.mp4"
     ],
-    CARTOONS: [
-        "https://github.com/Viruna2010/VIRU-TV/releases/download/v16.0/Dangharawaliga.__.__.Marsupilamiyai.__.sinhalacartoon.mp4"
-    ],
+    CARTOONS: [], // කාටූන් සම්පූර්ණයෙන්ම අයින් කළා
     COMEDY: [
         "https://github.com/Viruna2010/VIRU-TV/releases/download/v26.0/1.Hour.Extreme.Try.Not.To.Laughing.Compilation.memecompilation.mp4",
         "https://github.com/Viruna2010/VIRU-TV/releases/download/v27.0/1.Hour.Funniest.Animals.2023.Funny.Dog.Videos.Compilation.mp4",
@@ -63,29 +62,54 @@ const getSLTime = () => {
     const d = new Date();
     const utc = d.getTime() + (d.getTimezoneOffset() * 60000);
     const slTime = new Date(utc + (3600000 * 5.5));
-    return { hr: slTime.getHours(), min: slTime.getMinutes() };
+    const full = slTime.getHours().toString().padStart(2, '0') + ":" + slTime.getMinutes().toString().padStart(2, '0');
+    return { hr: slTime.getHours(), min: slTime.getMinutes(), full: full };
 };
 
-// --- TESTING LOGIC: දැන් ඉඳන් රෑ 8 (20:00) වෙනකන්ම Cartoons විතරයි ---
+const checkScheduledAd = () => {
+    try {
+        if (!fs.existsSync('./ads.json')) return null;
+        const adsData = JSON.parse(fs.readFileSync('./ads.json', 'utf8'));
+        const { full } = getSLTime();
+        return adsData.active_ads.find(ad => ad.time === full && ad.status === "on");
+    } catch (e) { return null; }
+};
+
 const getRequiredCategory = (hr) => {
-    if (hr < 20) {
-        return "CARTOONS"; 
-    }
-    return "PIRYTH"; // රෑ 8න් පස්සේ පිරිත් වලට මාරු වෙනවා
+    if (hr >= 0 && hr < 8) return "PIRYTH";
+    if (hr >= 8 && hr < 10) return "MORNING";
+    if (hr >= 10 && hr < 12) return "TRENDING";
+    if (hr >= 12 && hr < 14) return "COMEDY";
+    if (hr === 14) return "REVIEWS";
+    if (hr === 15) return "KIDS_SONGS";
+    if (hr >= 16 && hr < 18) return "TRENDING"; // කාටූන් වෙලාවට TRENDING දැම්මා
+    if (hr === 18) return "BANA";
+    if (hr >= 19 && hr < 22) return "TRENDING";
+    if (hr === 22) return "NATURE";
+    if (hr === 23) return "DESHABIMANI";
+    return "PIRYTH";
 };
 
-const startEngine = () => {
+const startEngine = (adUrl = null) => {
     const { hr, min } = getSLTime();
-    const category = getRequiredCategory(hr);
-    currentlyPlayingCategory = category;
-    const list = PLAYLISTS[category];
-    const videoToPlay = typeof list === 'string' ? list : list[Math.floor(Math.random() * list.length)];
+    let videoToPlay;
 
-    console.log(`[${hr}:${min}] 📺 TESTING MODE: ${currentlyPlayingCategory}`);
+    if (adUrl) {
+        videoToPlay = adUrl;
+        isAdPlaying = true;
+        currentlyPlayingCategory = "AD_BREAK";
+    } else {
+        isAdPlaying = false;
+        const category = getRequiredCategory(hr);
+        currentlyPlayingCategory = category;
+        const list = PLAYLISTS[category];
+        videoToPlay = typeof list === 'string' ? list : list[Math.floor(Math.random() * list.length)];
+    }
+
+    console.log(`[${hr}:${min}] 🎬 NOW PLAYING: ${currentlyPlayingCategory}`);
     isSwitching = false; 
 
-    // Original Quality Streaming
-    const ffmpegCmd = `ffmpeg -re -reconnect 1 -reconnect_at_eof 1 -reconnect_streamed 1 -reconnect_delay_max 5 -i "${videoToPlay}" -vf "scale=1280:720" -vcodec libx264 -preset ultrafast -tune zerolatency -g 40 -b:v 1500k -r 25 -acodec aac -b:a 128k -f flv "${streamURL}${streamKey}"`;
+    const ffmpegCmd = `ffmpeg -re -reconnect 1 -reconnect_at_eof 1 -reconnect_streamed 1 -reconnect_delay_max 5 -i "${videoToPlay}" -vf "scale=640:360,setpts=0.98*PTS" -vcodec libx264 -preset ultrafast -tune zerolatency -g 36 -b:v 300k -r 18 -acodec aac -af "atempo=1.02" -b:a 96k -f flv "${streamURL}${streamKey}"`;
     
     currentProcess = exec(ffmpegCmd);
     currentProcess.on('close', () => {
@@ -96,11 +120,21 @@ const startEngine = () => {
 
 setInterval(() => {
     const { hr } = getSLTime();
+    const ad = checkScheduledAd();
+    
+    if (ad && !isAdPlaying && !isSwitching) {
+        isSwitching = true;
+        console.log("⚡ [AD TRIGGER] Switching to AD Break...");
+        if (currentProcess) currentProcess.kill('SIGKILL');
+        setTimeout(() => startEngine(ad.url), 2000);
+        return;
+    }
+    
     const shouldBe = getRequiredCategory(hr);
-    if (currentlyPlayingCategory !== shouldBe && currentProcess && !isSwitching) {
+    if (!isAdPlaying && currentlyPlayingCategory !== shouldBe && currentProcess && !isSwitching) {
         isSwitching = true; 
         console.log(`⚡ [SCHEDULE] Switching to ${shouldBe}`);
-        currentProcess.kill('SIGKILL');
+        if (currentProcess) currentProcess.kill('SIGKILL');
         setTimeout(() => startEngine(), 2000);
     }
 }, 5000);
