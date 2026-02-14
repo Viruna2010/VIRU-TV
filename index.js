@@ -4,14 +4,13 @@ const fs = require('fs');
 const app = express();
 
 const PORT = process.env.PORT || 10000;
-app.get('/', (req, res) => res.send('Viru TV V53.6: Fixed Lightning Switch & 39 Videos! 🚀📡'));
+app.get('/', (req, res) => res.send('Viru TV V54.8: Cartoon Testing Mode! 🚀📡'));
 app.listen(PORT, () => console.log(`Viru TV running on port ${PORT}`));
 
 const streamURL = "rtmp://a.rtmp.youtube.com/live2/";
 const streamKey = process.env.STREAM_KEY;
 let currentProcess = null;
 let currentlyPlayingCategory = ""; 
-let isAdPlaying = false;
 let isSwitching = false; 
 
 const PLAYLISTS = {
@@ -41,10 +40,12 @@ const PLAYLISTS = {
     ],
     CARTOONS: [
         "https://github.com/Viruna2010/VIRU-TV/releases/download/v16.0/Dangharawaliga.__.__.Marsupilamiyai.__.sinhalacartoon.mp4",
-        "https://github.com/Viruna2010/VIRU-TV/releases/download/v17/garfield.3.stories.Sinhala.Dubed._._.Garfield.Sinhala.Cartoon.Dubed.Ep-1.mp4",
         "https://github.com/Viruna2010/VIRU-TV/releases/download/v19.0/Sura.Pappa.-.Wada.12.mp4",
         "https://github.com/Viruna2010/VIRU-TV/releases/download/v21.0/tin.tin.singhala.-.sinhala.cartoon.mp4",
-        "https://github.com/Viruna2010/VIRU-TV/releases/download/v22.0/Tintin.and.the.Temple.of.the.Sun.1969._.Sinhala.dubbed._.Full.movie.mp4"
+        "https://github.com/Viruna2010/VIRU-TV/releases/download/v22.0/Tintin.and.the.Temple.of.the.Sun.1969._.Sinhala.dubbed._.Full.movie.mp4",
+        "https://github.com/Viruna2010/VIRU-TV/releases/download/v23.0/videoplayback.1.mp4",
+        "https://github.com/Viruna2010/VIRU-TV/releases/download/v24.0/videoplayback.4.mp4",
+        "https://github.com/Viruna2010/VIRU-TV/releases/download/v25.0/-Full.Episode.mp4"
     ],
     COMEDY: [
         "https://github.com/Viruna2010/VIRU-TV/releases/download/v26.0/1.Hour.Extreme.Try.Not.To.Laughing.Compilation.memecompilation.mp4",
@@ -68,54 +69,29 @@ const getSLTime = () => {
     const d = new Date();
     const utc = d.getTime() + (d.getTimezoneOffset() * 60000);
     const slTime = new Date(utc + (3600000 * 5.5));
-    const full = slTime.getHours().toString().padStart(2, '0') + ":" + slTime.getMinutes().toString().padStart(2, '0');
-    return { hr: slTime.getHours(), min: slTime.getMinutes(), full: full };
+    return { hr: slTime.getHours(), min: slTime.getMinutes() };
 };
 
-const checkScheduledAd = () => {
-    try {
-        if (!fs.existsSync('./ads.json')) return null;
-        const adsData = JSON.parse(fs.readFileSync('./ads.json', 'utf8'));
-        const { full } = getSLTime();
-        return adsData.active_ads.find(ad => ad.time === full && ad.status === "on");
-    } catch (e) { return null; }
-};
-
+// --- TESTING LOGIC: දැන් ඉඳන් රෑ 8 (20:00) වෙනකන්ම Cartoons විතරයි ---
 const getRequiredCategory = (hr) => {
-    if (hr >= 0 && hr < 8) return "PIRYTH";
-    if (hr >= 8 && hr < 10) return "MORNING";
-    if (hr >= 10 && hr < 12) return "TRENDING";
-    if (hr >= 12 && hr < 14) return "COMEDY";
-    if (hr === 14) return "REVIEWS";
-    if (hr === 15) return "KIDS_SONGS";
-    if (hr >= 16 && hr < 18) return "CARTOONS";
-    if (hr === 18) return "BANA";
-    if (hr >= 19 && hr < 22) return "TRENDING";
-    if (hr === 22) return "NATURE";
-    if (hr === 23) return "DESHABIMANI";
-    return "PIRYTH";
+    if (hr < 20) {
+        return "CARTOONS"; 
+    }
+    return "PIRYTH"; // රෑ 8න් පස්සේ පිරිත් වලට මාරු වෙනවා
 };
 
-const startEngine = (adUrl = null) => {
+const startEngine = () => {
     const { hr, min } = getSLTime();
-    let videoToPlay;
+    const category = getRequiredCategory(hr);
+    currentlyPlayingCategory = category;
+    const list = PLAYLISTS[category];
+    const videoToPlay = typeof list === 'string' ? list : list[Math.floor(Math.random() * list.length)];
 
-    if (adUrl) {
-        videoToPlay = adUrl;
-        isAdPlaying = true;
-        currentlyPlayingCategory = "AD_BREAK";
-    } else {
-        isAdPlaying = false;
-        const category = getRequiredCategory(hr);
-        currentlyPlayingCategory = category;
-        const list = PLAYLISTS[category];
-        videoToPlay = typeof list === 'string' ? list : list[Math.floor(Math.random() * list.length)];
-    }
-
-    console.log(`[${hr}:${min}] 🎬 NOW PLAYING: ${currentlyPlayingCategory}`);
+    console.log(`[${hr}:${min}] 📺 TESTING MODE: ${currentlyPlayingCategory}`);
     isSwitching = false; 
 
-    const ffmpegCmd = `ffmpeg -re -reconnect 1 -reconnect_at_eof 1 -reconnect_streamed 1 -reconnect_delay_max 5 -i "${videoToPlay}" -vf "scale=640:360,setpts=0.98*PTS" -vcodec libx264 -preset ultrafast -tune zerolatency -g 36 -b:v 300k -r 18 -acodec aac -af "atempo=1.02" -b:a 96k -f flv "${streamURL}${streamKey}"`;
+    // Original Quality Streaming
+    const ffmpegCmd = `ffmpeg -re -reconnect 1 -reconnect_at_eof 1 -reconnect_streamed 1 -reconnect_delay_max 5 -i "${videoToPlay}" -vf "scale=1280:720" -vcodec libx264 -preset ultrafast -tune zerolatency -g 40 -b:v 1500k -r 25 -acodec aac -b:a 128k -f flv "${streamURL}${streamKey}"`;
     
     currentProcess = exec(ffmpegCmd);
     currentProcess.on('close', () => {
@@ -126,21 +102,11 @@ const startEngine = (adUrl = null) => {
 
 setInterval(() => {
     const { hr } = getSLTime();
-    const ad = checkScheduledAd();
-    
-    if (ad && !isAdPlaying && !isSwitching) {
-        isSwitching = true;
-        console.log("⚡ [AD TRIGGER] Switching to AD Break...");
-        if (currentProcess) currentProcess.kill('SIGKILL');
-        setTimeout(() => startEngine(ad.url), 2000);
-        return;
-    }
-    
     const shouldBe = getRequiredCategory(hr);
-    if (!isAdPlaying && currentlyPlayingCategory !== shouldBe && currentProcess && !isSwitching) {
+    if (currentlyPlayingCategory !== shouldBe && currentProcess && !isSwitching) {
         isSwitching = true; 
         console.log(`⚡ [SCHEDULE] Switching to ${shouldBe}`);
-        if (currentProcess) currentProcess.kill('SIGKILL');
+        currentProcess.kill('SIGKILL');
         setTimeout(() => startEngine(), 2000);
     }
 }, 5000);
