@@ -4,7 +4,7 @@ const fs = require('fs');
 const app = express();
 
 const PORT = process.env.PORT || 10000;
-app.get('/', (req, res) => res.send('Viru TV V53.6: Safety Mode - No Cartoons! 🚀📡'));
+app.get('/', (req, res) => res.send('Viru TV V54.4: All Programs Fixed! 🚀📡'));
 app.listen(PORT, () => console.log(`Viru TV running on port ${PORT}`));
 
 const streamURL = "rtmp://a.rtmp.youtube.com/live2/";
@@ -39,7 +39,7 @@ const PLAYLISTS = {
         "https://github.com/Viruna2010/VIRU-TV/releases/download/v39.0/videoplayback.1.mp4",
         "https://github.com/Viruna2010/VIRU-TV/releases/download/v40.0/_._.Venerable.Welimada.Saddaseela.Thero.mp4"
     ],
-    CARTOONS: [], // කාටූන් සම්පූර්ණයෙන්ම අයින් කළා
+    CARTOONS: [], 
     COMEDY: [
         "https://github.com/Viruna2010/VIRU-TV/releases/download/v26.0/1.Hour.Extreme.Try.Not.To.Laughing.Compilation.memecompilation.mp4",
         "https://github.com/Viruna2010/VIRU-TV/releases/download/v27.0/1.Hour.Funniest.Animals.2023.Funny.Dog.Videos.Compilation.mp4",
@@ -55,7 +55,9 @@ const PLAYLISTS = {
         "https://github.com/Viruna2010/VIRU-TV/releases/download/v36.0/_.HORROR.MOVIE.SINHALA.REVIEW.mp4",
         "https://github.com/Viruna2010/VIRU-TV/releases/download/v37.0/_._.English.vinglish._Hiccup.Sinhala.Cinema_.Sinhala.movie.review.mp4"
     ],
-    KIDS_SONGS: "https://github.com/Viruna2010/VIRU-TV/releases/download/v38.0/01._.Sinhala.Kids.Songs._.Sinhala.Lama.Geetha.Ekathuwa._.Kids.Song.Collection.mp4"
+    KIDS_SONGS: "https://github.com/Viruna2010/VIRU-TV/releases/download/v38.0/01._.Sinhala.Kids.Songs._.Sinhala.Lama.Geetha.Ekathuwa._.Kids.Song.Collection.mp4",
+    INSTRUMENTAL: "https://github.com/Viruna2010/VIRU-TV/releases/download/v4.0/1.Hour.Long.No.Copyright.video.__.Nature.and.music.mp4",
+    SPACE: "https://github.com/Viruna2010/VIRU-TV/releases/download/v41.0/Copyright.Free.Video_._Earth.In.Space_.4K.UHD.60fps.mp4"
 };
 
 const getSLTime = () => {
@@ -82,9 +84,11 @@ const getRequiredCategory = (hr) => {
     if (hr >= 12 && hr < 14) return "COMEDY";
     if (hr === 14) return "REVIEWS";
     if (hr === 15) return "KIDS_SONGS";
-    if (hr >= 16 && hr < 18) return "TRENDING"; // කාටූන් වෙලාවට TRENDING දැම්මා
+    if (hr === 16) return "TRENDING"; // 4-5 Trending Songs
+    if (hr === 17) return "INSTRUMENTAL"; 
     if (hr === 18) return "BANA";
-    if (hr >= 19 && hr < 22) return "TRENDING";
+    if (hr >= 19 && hr < 21) return "TRENDING";
+    if (hr === 21) return "SPACE"; // 9-10 Space Video
     if (hr === 22) return "NATURE";
     if (hr === 23) return "DESHABIMANI";
     return "PIRYTH";
@@ -106,15 +110,16 @@ const startEngine = (adUrl = null) => {
         videoToPlay = typeof list === 'string' ? list : list[Math.floor(Math.random() * list.length)];
     }
 
-    console.log(`[${hr}:${min}] 🎬 NOW PLAYING: ${currentlyPlayingCategory}`);
+    console.log(`[${hr}:${min}] 🎬 NOW STREAMING: ${currentlyPlayingCategory}`);
     isSwitching = false; 
 
-    const ffmpegCmd = `ffmpeg -re -reconnect 1 -reconnect_at_eof 1 -reconnect_streamed 1 -reconnect_delay_max 5 -i "${videoToPlay}" -vf "scale=640:360,setpts=0.98*PTS" -vcodec libx264 -preset ultrafast -tune zerolatency -g 36 -b:v 300k -r 18 -acodec aac -af "atempo=1.02" -b:a 96k -f flv "${streamURL}${streamKey}"`;
+    // Stability + Eco Mode FFmpeg (360p, 250k bitrate)
+    const ffmpegCmd = `ffmpeg -re -reconnect 1 -reconnect_at_eof 1 -reconnect_streamed 1 -reconnect_delay_max 5 -i "${videoToPlay}" -vf "scale=640:360,setpts=0.98*PTS" -vcodec libx264 -preset ultrafast -tune zerolatency -g 36 -b:v 250k -maxrate 250k -bufsize 500k -r 18 -acodec aac -af "atempo=1.02" -b:a 64k -f flv "${streamURL}${streamKey}"`;
     
     currentProcess = exec(ffmpegCmd);
     currentProcess.on('close', () => {
         currentProcess = null;
-        if (!isSwitching) setTimeout(() => startEngine(), 1000);
+        if (!isSwitching) setTimeout(() => startEngine(), 2000);
     });
 };
 
@@ -135,8 +140,8 @@ setInterval(() => {
         isSwitching = true; 
         console.log(`⚡ [SCHEDULE] Switching to ${shouldBe}`);
         if (currentProcess) currentProcess.kill('SIGKILL');
-        setTimeout(() => startEngine(), 2000);
+        setTimeout(() => startEngine(), 3000);
     }
-}, 5000);
+}, 10000);
 
 if (streamKey) startEngine();
