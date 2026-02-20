@@ -4,7 +4,7 @@ const fs = require('fs');
 const app = express();
 
 const PORT = process.env.PORT || 10000;
-app.get('/', (req, res) => res.send('Viru TV V54.4: All Programs Fixed! 🚀📡'));
+app.get('/', (req, res) => res.send('Viru TV V54.7: 128k Audio + Memory Fix! 🚀🎵'));
 app.listen(PORT, () => console.log(`Viru TV running on port ${PORT}`));
 
 const streamURL = "rtmp://a.rtmp.youtube.com/live2/";
@@ -68,15 +68,6 @@ const getSLTime = () => {
     return { hr: slTime.getHours(), min: slTime.getMinutes(), full: full };
 };
 
-const checkScheduledAd = () => {
-    try {
-        if (!fs.existsSync('./ads.json')) return null;
-        const adsData = JSON.parse(fs.readFileSync('./ads.json', 'utf8'));
-        const { full } = getSLTime();
-        return adsData.active_ads.find(ad => ad.time === full && ad.status === "on");
-    } catch (e) { return null; }
-};
-
 const getRequiredCategory = (hr) => {
     if (hr >= 0 && hr < 8) return "PIRYTH";
     if (hr >= 8 && hr < 10) return "MORNING";
@@ -84,17 +75,20 @@ const getRequiredCategory = (hr) => {
     if (hr >= 12 && hr < 14) return "COMEDY";
     if (hr === 14) return "REVIEWS";
     if (hr === 15) return "KIDS_SONGS";
-    if (hr === 16) return "TRENDING"; // 4-5 Trending Songs
+    if (hr === 16) return "TRENDING"; 
     if (hr === 17) return "INSTRUMENTAL"; 
     if (hr === 18) return "BANA";
     if (hr >= 19 && hr < 21) return "TRENDING";
-    if (hr === 21) return "SPACE"; // 9-10 Space Video
+    if (hr === 21) return "SPACE"; 
     if (hr === 22) return "NATURE";
     if (hr === 23) return "DESHABIMANI";
     return "PIRYTH";
 };
 
 const startEngine = (adUrl = null) => {
+    // Memory & Ingestion Fix: පරණ FFmpeg සම්පූර්ණයෙන්ම Kill කිරීම
+    exec('pkill -9 ffmpeg');
+
     const { hr, min } = getSLTime();
     let videoToPlay;
 
@@ -113,14 +107,24 @@ const startEngine = (adUrl = null) => {
     console.log(`[${hr}:${min}] 🎬 NOW STREAMING: ${currentlyPlayingCategory}`);
     isSwitching = false; 
 
-    // Stability + Eco Mode FFmpeg (360p, 250k bitrate)
-    const ffmpegCmd = `ffmpeg -re -reconnect 1 -reconnect_at_eof 1 -reconnect_streamed 1 -reconnect_delay_max 5 -i "${videoToPlay}" -vf "scale=640:360,setpts=0.98*PTS" -vcodec libx264 -preset ultrafast -tune zerolatency -g 36 -b:v 250k -maxrate 250k -bufsize 500k -r 18 -acodec aac -af "atempo=1.02" -b:a 64k -f flv "${streamURL}${streamKey}"`;
+    // Quality Settings: 360p (280k video) + 128k High Quality Audio
+    // Total Bitrate ~420kbps. දවසට ~4.5GB. මාසෙට ~130GB. Render Limit එකෙන් පොඩ්ඩක් එහා මෙහා වුණාට අවුලක් නැත.
+    const ffmpegCmd = `ffmpeg -re -reconnect 1 -reconnect_at_eof 1 -reconnect_streamed 1 -reconnect_delay_max 5 -i "${videoToPlay}" -vf "scale=640:360,setpts=0.98*PTS" -vcodec libx264 -preset ultrafast -tune zerolatency -g 36 -b:v 280k -maxrate 280k -bufsize 1000k -r 18 -acodec aac -af "atempo=1.02" -b:a 128k -f flv "${streamURL}${streamKey}"`;
     
     currentProcess = exec(ffmpegCmd);
     currentProcess.on('close', () => {
         currentProcess = null;
-        if (!isSwitching) setTimeout(() => startEngine(), 2000);
+        if (!isSwitching) setTimeout(() => startEngine(), 1500);
     });
+};
+
+const checkScheduledAd = () => {
+    try {
+        if (!fs.existsSync('./ads.json')) return null;
+        const adsData = JSON.parse(fs.readFileSync('./ads.json', 'utf8'));
+        const { full } = getSLTime();
+        return adsData.active_ads.find(ad => ad.time === full && ad.status === "on");
+    } catch (e) { return null; }
 };
 
 setInterval(() => {
@@ -129,19 +133,19 @@ setInterval(() => {
     
     if (ad && !isAdPlaying && !isSwitching) {
         isSwitching = true;
-        console.log("⚡ [AD TRIGGER] Switching to AD Break...");
+        console.log("⚡ [AD] Switching to AD Break...");
         if (currentProcess) currentProcess.kill('SIGKILL');
         setTimeout(() => startEngine(ad.url), 2000);
         return;
     }
     
     const shouldBe = getRequiredCategory(hr);
-    if (!isAdPlaying && currentlyPlayingCategory !== shouldBe && currentProcess && !isSwitching) {
+    if (!isAdPlaying && currentlyPlayingCategory !== shouldBe && !isSwitching) {
         isSwitching = true; 
         console.log(`⚡ [SCHEDULE] Switching to ${shouldBe}`);
         if (currentProcess) currentProcess.kill('SIGKILL');
-        setTimeout(() => startEngine(), 3000);
+        setTimeout(() => startEngine(), 2500);
     }
-}, 10000);
+}, 5000);
 
 if (streamKey) startEngine();
