@@ -4,7 +4,7 @@ const fs = require('fs');
 const app = express();
 
 const PORT = process.env.PORT || 10000;
-app.get('/', (req, res) => res.send('Viru TV V54.7: 128k Audio + Memory Fix! 🚀🎵'));
+app.get('/', (req, res) => res.send('Viru TV V54.9: Buffering & Ingestion Fixed! 🛡️⚡'));
 app.listen(PORT, () => console.log(`Viru TV running on port ${PORT}`));
 
 const streamURL = "rtmp://a.rtmp.youtube.com/live2/";
@@ -13,6 +13,7 @@ let currentProcess = null;
 let currentlyPlayingCategory = ""; 
 let isAdPlaying = false;
 let isSwitching = false; 
+let isStarting = false;
 
 const PLAYLISTS = {
     PIRYTH: [
@@ -86,36 +87,44 @@ const getRequiredCategory = (hr) => {
 };
 
 const startEngine = (adUrl = null) => {
-    // Memory & Ingestion Fix: පරණ FFmpeg සම්පූර්ණයෙන්ම Kill කිරීම
+    if (isStarting) return;
+    isStarting = true;
+
+    // පරණ FFmpeg සම්පූර්ණයෙන්ම අයින් කිරීම (Ingestion Error Fix)
     exec('pkill -9 ffmpeg');
 
-    const { hr, min } = getSLTime();
-    let videoToPlay;
+    setTimeout(() => {
+        const { hr, min } = getSLTime();
+        let videoToPlay;
 
-    if (adUrl) {
-        videoToPlay = adUrl;
-        isAdPlaying = true;
-        currentlyPlayingCategory = "AD_BREAK";
-    } else {
-        isAdPlaying = false;
-        const category = getRequiredCategory(hr);
-        currentlyPlayingCategory = category;
-        const list = PLAYLISTS[category];
-        videoToPlay = typeof list === 'string' ? list : list[Math.floor(Math.random() * list.length)];
-    }
+        if (adUrl) {
+            videoToPlay = adUrl;
+            isAdPlaying = true;
+            currentlyPlayingCategory = "AD_BREAK";
+        } else {
+            isAdPlaying = false;
+            const category = getRequiredCategory(hr);
+            currentlyPlayingCategory = category;
+            const list = PLAYLISTS[category];
+            videoToPlay = typeof list === 'string' ? list : list[Math.floor(Math.random() * list.length)];
+        }
 
-    console.log(`[${hr}:${min}] 🎬 NOW STREAMING: ${currentlyPlayingCategory}`);
-    isSwitching = false; 
+        console.log(`[${hr}:${min}] 🎬 NOW STREAMING: ${currentlyPlayingCategory}`);
 
-    // Quality Settings: 360p (280k video) + 128k High Quality Audio
-    // Total Bitrate ~420kbps. දවසට ~4.5GB. මාසෙට ~130GB. Render Limit එකෙන් පොඩ්ඩක් එහා මෙහා වුණාට අවුලක් නැත.
-    const ffmpegCmd = `ffmpeg -re -reconnect 1 -reconnect_at_eof 1 -reconnect_streamed 1 -reconnect_delay_max 5 -i "${videoToPlay}" -vf "scale=640:360,setpts=0.98*PTS" -vcodec libx264 -preset ultrafast -tune zerolatency -g 36 -b:v 280k -maxrate 280k -bufsize 1000k -r 18 -acodec aac -af "atempo=1.02" -b:a 128k -f flv "${streamURL}${streamKey}"`;
-    
-    currentProcess = exec(ffmpegCmd);
-    currentProcess.on('close', () => {
-        currentProcess = null;
-        if (!isSwitching) setTimeout(() => startEngine(), 1500);
-    });
+        // Stable Streaming FFmpeg Settings:
+        // -threads 2: වේගය වැඩි කිරීමට
+        // -bufsize 2000k: YouTube එකට යන ඩේටා නතර නොවී තබා ගැනීමට
+        const ffmpegCmd = `ffmpeg -re -reconnect 1 -reconnect_at_eof 1 -reconnect_streamed 1 -reconnect_delay_max 5 -i "${videoToPlay}" -vf "scale=640:360,setpts=0.98*PTS" -vcodec libx264 -preset ultrafast -tune zerolatency -threads 2 -g 36 -b:v 280k -maxrate 280k -bufsize 2000k -r 18 -acodec aac -af "atempo=1.02" -b:a 128k -f flv "${streamURL}${streamKey}"`;
+        
+        currentProcess = exec(ffmpegCmd);
+        isStarting = false;
+        isSwitching = false;
+
+        currentProcess.on('close', () => {
+            currentProcess = null;
+            if (!isSwitching) setTimeout(() => startEngine(), 2000);
+        });
+    }, 1500);
 };
 
 const checkScheduledAd = () => {
@@ -131,21 +140,21 @@ setInterval(() => {
     const { hr } = getSLTime();
     const ad = checkScheduledAd();
     
-    if (ad && !isAdPlaying && !isSwitching) {
+    if (ad && !isAdPlaying && !isSwitching && !isStarting) {
         isSwitching = true;
-        console.log("⚡ [AD] Switching to AD Break...");
+        console.log("⚡ [AD] Switching...");
         if (currentProcess) currentProcess.kill('SIGKILL');
-        setTimeout(() => startEngine(ad.url), 2000);
+        setTimeout(() => startEngine(ad.url), 1000);
         return;
     }
     
     const shouldBe = getRequiredCategory(hr);
-    if (!isAdPlaying && currentlyPlayingCategory !== shouldBe && !isSwitching) {
+    if (!isAdPlaying && currentlyPlayingCategory !== shouldBe && !isSwitching && !isStarting) {
         isSwitching = true; 
         console.log(`⚡ [SCHEDULE] Switching to ${shouldBe}`);
         if (currentProcess) currentProcess.kill('SIGKILL');
-        setTimeout(() => startEngine(), 2500);
+        setTimeout(() => startEngine(), 1000);
     }
-}, 5000);
+}, 8000);
 
 if (streamKey) startEngine();
