@@ -4,7 +4,7 @@ const fs = require('fs');
 const app = express();
 
 const PORT = process.env.PORT || 10000;
-app.get('/', (req, res) => res.send('Viru TV V54.9: Buffering & Ingestion Fixed! 🛡️⚡'));
+app.get('/', (req, res) => res.send('Viru TV V55.0: Space & Cube Slots Updated! 🌌🧩⚡'));
 app.listen(PORT, () => console.log(`Viru TV running on port ${PORT}`));
 
 const streamURL = "rtmp://a.rtmp.youtube.com/live2/";
@@ -58,7 +58,12 @@ const PLAYLISTS = {
     ],
     KIDS_SONGS: "https://github.com/Viruna2010/VIRU-TV/releases/download/v38.0/01._.Sinhala.Kids.Songs._.Sinhala.Lama.Geetha.Ekathuwa._.Kids.Song.Collection.mp4",
     INSTRUMENTAL: "https://github.com/Viruna2010/VIRU-TV/releases/download/v4.0/1.Hour.Long.No.Copyright.video.__.Nature.and.music.mp4",
-    SPACE: "https://github.com/Viruna2010/VIRU-TV/releases/download/v41.0/Copyright.Free.Video_._Earth.In.Space_.4K.UHD.60fps.mp4"
+    SPACE: [
+        "https://github.com/Viruna2010/VIRU-TV/releases/download/v41.0/Copyright.Free.Video_._Earth.In.Space_.4K.UHD.60fps.mp4",
+        "https://github.com/Viruna2010/VIRU-TV/releases/download/v42.0/videoplayback.5.mp4",
+        "https://github.com/Viruna2010/VIRU-TV/releases/download/v43.0/Moon.Stock.Footage._.Full.Moon._.Eclipse._.Night._.Free.HD.Videos.-.no.copyright.mp4"
+    ],
+    CUBE: "https://github.com/Viruna2010/VIRU-TV/releases/download/v44.0/one.hour.cube.with.me.-.real.time.with.background.music.-.Java.Cuber.360p.h264.mp4"
 };
 
 const getSLTime = () => {
@@ -79,8 +84,9 @@ const getRequiredCategory = (hr) => {
     if (hr === 16) return "TRENDING"; 
     if (hr === 17) return "INSTRUMENTAL"; 
     if (hr === 18) return "BANA";
-    if (hr >= 19 && hr < 21) return "TRENDING";
-    if (hr === 21) return "SPACE"; 
+    if (hr === 19) return "TRENDING";
+    if (hr === 20) return "SPACE";   // රෑ 8 - 9 SPACE වීඩියෝ ලූපය
+    if (hr === 21) return "CUBE";    // රෑ 9 - 10 CUBE SOLVING පැය
     if (hr === 22) return "NATURE";
     if (hr === 23) return "DESHABIMANI";
     return "PIRYTH";
@@ -90,7 +96,6 @@ const startEngine = (adUrl = null) => {
     if (isStarting) return;
     isStarting = true;
 
-    // පරණ FFmpeg සම්පූර්ණයෙන්ම අයින් කිරීම (Ingestion Error Fix)
     exec('pkill -9 ffmpeg');
 
     setTimeout(() => {
@@ -111,9 +116,6 @@ const startEngine = (adUrl = null) => {
 
         console.log(`[${hr}:${min}] 🎬 NOW STREAMING: ${currentlyPlayingCategory}`);
 
-        // Stable Streaming FFmpeg Settings:
-        // -threads 2: වේගය වැඩි කිරීමට
-        // -bufsize 2000k: YouTube එකට යන ඩේටා නතර නොවී තබා ගැනීමට
         const ffmpegCmd = `ffmpeg -re -reconnect 1 -reconnect_at_eof 1 -reconnect_streamed 1 -reconnect_delay_max 5 -i "${videoToPlay}" -vf "scale=640:360,setpts=0.98*PTS" -vcodec libx264 -preset ultrafast -tune zerolatency -threads 2 -g 36 -b:v 280k -maxrate 280k -bufsize 2000k -r 18 -acodec aac -af "atempo=1.02" -b:a 128k -f flv "${streamURL}${streamKey}"`;
         
         currentProcess = exec(ffmpegCmd);
