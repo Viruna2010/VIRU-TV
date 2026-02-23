@@ -4,7 +4,7 @@ const fs = require('fs');
 const app = express();
 
 const PORT = process.env.PORT || 10000;
-app.get('/', (req, res) => res.send('Viru TV V53.6: Fixed Lightning Switch & 39 Videos! 🚀📡'));
+app.get('/', (req, res) => res.send('Viru TV V54.9: Buffering & Ingestion Fixed! 🛡️⚡'));
 app.listen(PORT, () => console.log(`Viru TV running on port ${PORT}`));
 
 const streamURL = "rtmp://a.rtmp.youtube.com/live2/";
@@ -13,6 +13,7 @@ let currentProcess = null;
 let currentlyPlayingCategory = ""; 
 let isAdPlaying = false;
 let isSwitching = false; 
+let isStarting = false;
 
 const PLAYLISTS = {
     PIRYTH: [
@@ -39,10 +40,7 @@ const PLAYLISTS = {
         "https://github.com/Viruna2010/VIRU-TV/releases/download/v39.0/videoplayback.1.mp4",
         "https://github.com/Viruna2010/VIRU-TV/releases/download/v40.0/_._.Venerable.Welimada.Saddaseela.Thero.mp4"
     ],
-    CARTOONS: [
-        "https://github.com/Viruna2010/VIRU-TV/releases/download/v16.0/Dangharawaliga.__.__.Marsupilamiyai.__.sinhalacartoon.mp4",
-        "https://github.com/Viruna2010/VIRU-TV/releases/download/v22.0/Tintin.and.the.Temple.of.the.Sun.1969._.Sinhala.dubbed._.Full.movie.mp4"
-    ],
+    CARTOONS: [], 
     COMEDY: [
         "https://github.com/Viruna2010/VIRU-TV/releases/download/v26.0/1.Hour.Extreme.Try.Not.To.Laughing.Compilation.memecompilation.mp4",
         "https://github.com/Viruna2010/VIRU-TV/releases/download/v27.0/1.Hour.Funniest.Animals.2023.Funny.Dog.Videos.Compilation.mp4",
@@ -58,7 +56,9 @@ const PLAYLISTS = {
         "https://github.com/Viruna2010/VIRU-TV/releases/download/v36.0/_.HORROR.MOVIE.SINHALA.REVIEW.mp4",
         "https://github.com/Viruna2010/VIRU-TV/releases/download/v37.0/_._.English.vinglish._Hiccup.Sinhala.Cinema_.Sinhala.movie.review.mp4"
     ],
-    KIDS_SONGS: "https://github.com/Viruna2010/VIRU-TV/releases/download/v38.0/01._.Sinhala.Kids.Songs._.Sinhala.Lama.Geetha.Ekathuwa._.Kids.Song.Collection.mp4"
+    KIDS_SONGS: "https://github.com/Viruna2010/VIRU-TV/releases/download/v38.0/01._.Sinhala.Kids.Songs._.Sinhala.Lama.Geetha.Ekathuwa._.Kids.Song.Collection.mp4",
+    INSTRUMENTAL: "https://github.com/Viruna2010/VIRU-TV/releases/download/v4.0/1.Hour.Long.No.Copyright.video.__.Nature.and.music.mp4",
+    SPACE: "https://github.com/Viruna2010/VIRU-TV/releases/download/v41.0/Copyright.Free.Video_._Earth.In.Space_.4K.UHD.60fps.mp4"
 };
 
 const getSLTime = () => {
@@ -67,6 +67,64 @@ const getSLTime = () => {
     const slTime = new Date(utc + (3600000 * 5.5));
     const full = slTime.getHours().toString().padStart(2, '0') + ":" + slTime.getMinutes().toString().padStart(2, '0');
     return { hr: slTime.getHours(), min: slTime.getMinutes(), full: full };
+};
+
+const getRequiredCategory = (hr) => {
+    if (hr >= 0 && hr < 8) return "PIRYTH";
+    if (hr >= 8 && hr < 10) return "MORNING";
+    if (hr >= 10 && hr < 12) return "TRENDING";
+    if (hr >= 12 && hr < 14) return "COMEDY";
+    if (hr === 14) return "REVIEWS";
+    if (hr === 15) return "KIDS_SONGS";
+    if (hr === 16) return "TRENDING"; 
+    if (hr === 17) return "INSTRUMENTAL"; 
+    if (hr === 18) return "BANA";
+    if (hr >= 19 && hr < 21) return "TRENDING";
+    if (hr === 21) return "SPACE"; 
+    if (hr === 22) return "NATURE";
+    if (hr === 23) return "DESHABIMANI";
+    return "PIRYTH";
+};
+
+const startEngine = (adUrl = null) => {
+    if (isStarting) return;
+    isStarting = true;
+
+    // පරණ FFmpeg සම්පූර්ණයෙන්ම අයින් කිරීම (Ingestion Error Fix)
+    exec('pkill -9 ffmpeg');
+
+    setTimeout(() => {
+        const { hr, min } = getSLTime();
+        let videoToPlay;
+
+        if (adUrl) {
+            videoToPlay = adUrl;
+            isAdPlaying = true;
+            currentlyPlayingCategory = "AD_BREAK";
+        } else {
+            isAdPlaying = false;
+            const category = getRequiredCategory(hr);
+            currentlyPlayingCategory = category;
+            const list = PLAYLISTS[category];
+            videoToPlay = typeof list === 'string' ? list : list[Math.floor(Math.random() * list.length)];
+        }
+
+        console.log(`[${hr}:${min}] 🎬 NOW STREAMING: ${currentlyPlayingCategory}`);
+
+        // Stable Streaming FFmpeg Settings:
+        // -threads 2: වේගය වැඩි කිරීමට
+        // -bufsize 2000k: YouTube එකට යන ඩේටා නතර නොවී තබා ගැනීමට
+        const ffmpegCmd = `ffmpeg -re -reconnect 1 -reconnect_at_eof 1 -reconnect_streamed 1 -reconnect_delay_max 5 -i "${videoToPlay}" -vf "scale=640:360,setpts=0.98*PTS" -vcodec libx264 -preset ultrafast -tune zerolatency -threads 2 -g 36 -b:v 280k -maxrate 280k -bufsize 2000k -r 18 -acodec aac -af "atempo=1.02" -b:a 128k -f flv "${streamURL}${streamKey}"`;
+        
+        currentProcess = exec(ffmpegCmd);
+        isStarting = false;
+        isSwitching = false;
+
+        currentProcess.on('close', () => {
+            currentProcess = null;
+            if (!isSwitching) setTimeout(() => startEngine(), 2000);
+        });
+    }, 1500);
 };
 
 const checkScheduledAd = () => {
@@ -78,68 +136,25 @@ const checkScheduledAd = () => {
     } catch (e) { return null; }
 };
 
-const getRequiredCategory = (hr) => {
-    if (hr >= 0 && hr < 8) return "PIRYTH";
-    if (hr >= 8 && hr < 10) return "MORNING";
-    if (hr >= 10 && hr < 12) return "TRENDING";
-    if (hr >= 12 && hr < 14) return "COMEDY";
-    if (hr === 14) return "REVIEWS";
-    if (hr === 15) return "KIDS_SONGS";
-    if (hr >= 16 && hr < 18) return "CARTOONS";
-    if (hr === 18) return "BANA";
-    if (hr >= 19 && hr < 22) return "TRENDING";
-    if (hr === 22) return "NATURE";
-    if (hr === 23) return "DESHABIMANI";
-    return "PIRYTH";
-};
-
-const startEngine = (adUrl = null) => {
-    const { hr, min } = getSLTime();
-    let videoToPlay;
-
-    if (adUrl) {
-        videoToPlay = adUrl;
-        isAdPlaying = true;
-        currentlyPlayingCategory = "AD_BREAK";
-    } else {
-        isAdPlaying = false;
-        const category = getRequiredCategory(hr);
-        currentlyPlayingCategory = category;
-        const list = PLAYLISTS[category];
-        videoToPlay = typeof list === 'string' ? list : list[Math.floor(Math.random() * list.length)];
-    }
-
-    console.log(`[${hr}:${min}] 🎬 NOW PLAYING: ${currentlyPlayingCategory}`);
-    isSwitching = false; 
-
-    const ffmpegCmd = `ffmpeg -re -reconnect 1 -reconnect_at_eof 1 -reconnect_streamed 1 -reconnect_delay_max 5 -i "${videoToPlay}" -vf "scale=640:360,setpts=0.98*PTS" -vcodec libx264 -preset ultrafast -tune zerolatency -g 36 -b:v 300k -r 18 -acodec aac -af "atempo=1.02" -b:a 96k -f flv "${streamURL}${streamKey}"`;
-    
-    currentProcess = exec(ffmpegCmd);
-    currentProcess.on('close', () => {
-        currentProcess = null;
-        if (!isSwitching) setTimeout(() => startEngine(), 1000);
-    });
-};
-
 setInterval(() => {
     const { hr } = getSLTime();
     const ad = checkScheduledAd();
     
-    if (ad && !isAdPlaying && !isSwitching) {
+    if (ad && !isAdPlaying && !isSwitching && !isStarting) {
         isSwitching = true;
-        console.log("⚡ [AD TRIGGER] Switching to AD Break...");
+        console.log("⚡ [AD] Switching...");
         if (currentProcess) currentProcess.kill('SIGKILL');
-        setTimeout(() => startEngine(ad.url), 2000);
+        setTimeout(() => startEngine(ad.url), 1000);
         return;
     }
     
     const shouldBe = getRequiredCategory(hr);
-    if (!isAdPlaying && currentlyPlayingCategory !== shouldBe && currentProcess && !isSwitching) {
+    if (!isAdPlaying && currentlyPlayingCategory !== shouldBe && !isSwitching && !isStarting) {
         isSwitching = true; 
         console.log(`⚡ [SCHEDULE] Switching to ${shouldBe}`);
         if (currentProcess) currentProcess.kill('SIGKILL');
-        setTimeout(() => startEngine(), 2000);
+        setTimeout(() => startEngine(), 1000);
     }
-}, 5000);
+}, 8000);
 
 if (streamKey) startEngine();
