@@ -4,7 +4,7 @@ const fs = require('fs');
 const app = express();
 
 const PORT = process.env.PORT || 10000;
-app.get('/', (req, res) => res.send('Viru TV V56.0: Cartoons Added! 👶📺⚡'));
+app.get('/', (req, res) => res.send('Viru TV V56.4: Fully Shuffled Cartoons! 👶📺⚡'));
 app.listen(PORT, () => console.log(`Viru TV running on port ${PORT}`));
 
 const streamURL = "rtmp://a.rtmp.youtube.com/live2/";
@@ -42,8 +42,11 @@ const PLAYLISTS = {
     ],
     CARTOONS: [
         "https://github.com/Viruna2010/VIRU-TV/releases/download/v45.0/Pencilmate.Don.t.Waste.Paper.Animation.Cartoons.Pencilmation.-.Pencilmation.Live.360p.h264.mp4",
-        "https://github.com/Viruna2010/VIRU-TV/releases/download/v46.0/Nee-Naw.Nee-Naw.Don.t.Play.with.Fire.+.More.Fire.Truck.Special.Pinkfong.Super.Rescue.Team.-.Pinkfong.Super.Rescue.Team.-.Kids.Songs.Cartoons.360p.h264.mp4"
-    ], 
+        "https://github.com/Viruna2010/VIRU-TV/releases/download/v46.0/Nee-Naw.Nee-Naw.Don.t.Play.with.Fire.+.More.Fire.Truck.Special.Pinkfong.Super.Rescue.Team.-.Pinkfong.Super.Rescue.Team.-.Kids.Songs.Cartoons.360p.h264.mp4",
+        "https://github.com/Viruna2010/VIRU-TV/releases/download/v47.0/Nee-Naw.Nee-Naw.Fire.Truck.Songs.for.Kids.Pinkfong.Super.Rescue.Team.-.Pinkfong.Super.Rescue.Team.-.Kids.Songs.Cartoons.360p.h264.mp4",
+        "https://github.com/Viruna2010/VIRU-TV/releases/download/v48.0/Hogi.and.Dinosaur.s.Colorful.Bike.Race.Colors.Song.15.min.Compilation.Hogi.Colors.Hogi.Pinkfong.-.Hogi.Pinkfong.-.Learn.Play.360p.h264.mp4",
+        "https://github.com/Viruna2010/VIRU-TV/releases/download/v49.0/Little.Heroes.to.the.Rescue.Song.ver.+.More.Fun.Car.Song.for.kids.Pinkfong.Super.Rescue.Team.-.Pinkfong.Super.Rescue.Team.-.Kids.Songs.Cartoons.360p.h264.mp4"
+    ],
     COMEDY: [
         "https://github.com/Viruna2010/VIRU-TV/releases/download/v26.0/1.Hour.Extreme.Try.Not.To.Laughing.Compilation.memecompilation.mp4",
         "https://github.com/Viruna2010/VIRU-TV/releases/download/v27.0/1.Hour.Funniest.Animals.2023.Funny.Dog.Videos.Compilation.mp4",
