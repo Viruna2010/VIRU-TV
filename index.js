@@ -4,11 +4,11 @@ const fs = require('fs');
 const app = express();
 
 const PORT = process.env.PORT || 10000;
-app.get('/', (req, res) => res.send('Viru TV V56.4: Fully Shuffled Cartoons! 👶📺⚡'));
+app.get('/', (req, res) => res.send('Viru TV V57.1: All Videos Restored! 📺⚡'));
 app.listen(PORT, () => console.log(`Viru TV running on port ${PORT}`));
 
 const streamURL = "rtmp://a.rtmp.youtube.com/live2/";
-const streamKey = process.env.STREAM_KEY;
+const streamKey = process.env.STREAM_KEY; 
 let currentProcess = null;
 let currentlyPlayingCategory = ""; 
 let isAdPlaying = false;
@@ -22,6 +22,7 @@ const PLAYLISTS = {
     ],
     DESHABIMANI: "https://github.com/Viruna2010/VIRU-TV/releases/download/v3.0/Uda.Gee._.Sinhala.Morning.Songs.Volume.01._.Sinhala.Song._.SinduManager.mp4",
     NATURE: "https://github.com/Viruna2010/VIRU-TV/releases/download/v4.0/1.Hour.Long.No.Copyright.video.__.Nature.and.music.mp4",
+    // 10AM - 12PM / 7PM - 8PM (පරණ Trendings ටික restored)
     TRENDING: [
         "https://github.com/Viruna2010/VIRU-TV/releases/download/v5.0/New.Trending.Sinhala.Remix.Collection.Trending.Sinhala.Songs.PlayList.-.Oshana.Alahakoon.240p.h264.mp4",
         "https://github.com/Viruna2010/VIRU-TV/releases/download/v6.0/videoplayback.mp4",
@@ -40,12 +41,7 @@ const PLAYLISTS = {
         "https://github.com/Viruna2010/VIRU-TV/releases/download/v39.0/videoplayback.1.mp4",
         "https://github.com/Viruna2010/VIRU-TV/releases/download/v40.0/_._.Venerable.Welimada.Saddaseela.Thero.mp4"
     ],
-    CARTOONS: [
-        "https://github.com/Viruna2010/VIRU-TV/releases/download/v46.0/Nee-Naw.Nee-Naw.Don.t.Play.with.Fire.+.More.Fire.Truck.Special.Pinkfong.Super.Rescue.Team.-.Pinkfong.Super.Rescue.Team.-.Kids.Songs.Cartoons.360p.h264.mp4",
-        "https://github.com/Viruna2010/VIRU-TV/releases/download/v47.0/Nee-Naw.Nee-Naw.Fire.Truck.Songs.for.Kids.Pinkfong.Super.Rescue.Team.-.Pinkfong.Super.Rescue.Team.-.Kids.Songs.Cartoons.360p.h264.mp4",
-        "https://github.com/Viruna2010/VIRU-TV/releases/download/v48.0/Hogi.and.Dinosaur.s.Colorful.Bike.Race.Colors.Song.15.min.Compilation.Hogi.Colors.Hogi.Pinkfong.-.Hogi.Pinkfong.-.Learn.Play.360p.h264.mp4",
-        "https://github.com/Viruna2010/VIRU-TV/releases/download/v49.0/Little.Heroes.to.the.Rescue.Song.ver.+.More.Fun.Car.Song.for.kids.Pinkfong.Super.Rescue.Team.-.Pinkfong.Super.Rescue.Team.-.Kids.Songs.Cartoons.360p.h264.mp4"
-    ],
+    CARTOONS: [], // Strikes නිසා අයින් කළා
     COMEDY: [
         "https://github.com/Viruna2010/VIRU-TV/releases/download/v26.0/1.Hour.Extreme.Try.Not.To.Laughing.Compilation.memecompilation.mp4",
         "https://github.com/Viruna2010/VIRU-TV/releases/download/v27.0/1.Hour.Funniest.Animals.2023.Funny.Dog.Videos.Compilation.mp4",
@@ -62,7 +58,15 @@ const PLAYLISTS = {
         "https://github.com/Viruna2010/VIRU-TV/releases/download/v37.0/_._.English.vinglish._Hiccup.Sinhala.Cinema_.Sinhala.movie.review.mp4"
     ],
     KIDS_SONGS: "https://github.com/Viruna2010/VIRU-TV/releases/download/v38.0/01._.Sinhala.Kids.Songs._.Sinhala.Lama.Geetha.Ekathuwa._.Kids.Song.Collection.mp4",
-    INSTRUMENTAL: "https://github.com/Viruna2010/VIRU-TV/releases/download/v4.0/1.Hour.Long.No.Copyright.video.__.Nature.and.music.mp4",
+    INSTRUMENTAL: [
+        "https://github.com/viruna123/Cricket-Live/releases/download/v1.0/cricket.playing.SL.mp4",
+        "https://github.com/viruna123/Cricket-Live/releases/download/v2.0/sl.vs.nz.mp4"
+    ],
+    // 7PM-8PM සින්දු (Mountain Video + Relaxing Audio)
+    RELAXING: {
+        video: "https://github.com/Viruna2010/VIRU-TV/releases/download/v50.0/Cinematic_hyperrealistic_8second_video_loop_of_a_m_e0cf9a7edf.mp4",
+        audio: "https://github.com/viruna123/Cricket-Live/releases/download/v3.0/360-no-scope-the-soundlings_4cNYa2TG.mp3"
+    },
     SPACE: [
         "https://github.com/Viruna2010/VIRU-TV/releases/download/v41.0/Copyright.Free.Video_._Earth.In.Space_.4K.UHD.60fps.mp4",
         "https://github.com/Viruna2010/VIRU-TV/releases/download/v42.0/videoplayback.5.mp4",
@@ -86,12 +90,12 @@ const getRequiredCategory = (hr) => {
     if (hr >= 12 && hr < 14) return "COMEDY";
     if (hr === 14) return "REVIEWS";
     if (hr === 15) return "KIDS_SONGS";
-    if (hr === 16) return "CARTOONS"; // 4 PM - 5 PM CARTOONS
-    if (hr === 17) return "INSTRUMENTAL"; 
+    if (hr === 16) return "CARTOONS"; 
+    if (hr === 17) return "INSTRUMENTAL"; // 5PM - 6PM Cricket
     if (hr === 18) return "BANA";
-    if (hr === 19) return "TRENDING";
-    if (hr === 20) return "SPACE";   // රෑ 8 - 9 SPACE වීඩියෝ ලූපය
-    if (hr === 21) return "CUBE";    // රෑ 9 - 10 CUBE SOLVING පැය
+    if (hr === 19) return "RELAXING"; // Muted Mountain Video
+    if (hr === 20) return "SPACE";
+    if (hr === 21) return "CUBE"; 
     if (hr === 22) return "NATURE";
     if (hr === 23) return "DESHABIMANI";
     return "PIRYTH";
@@ -106,6 +110,7 @@ const startEngine = (adUrl = null) => {
     setTimeout(() => {
         const { hr, min } = getSLTime();
         let videoToPlay;
+        let isRelaxing = false;
 
         if (adUrl) {
             videoToPlay = adUrl;
@@ -115,13 +120,27 @@ const startEngine = (adUrl = null) => {
             isAdPlaying = false;
             const category = getRequiredCategory(hr);
             currentlyPlayingCategory = category;
-            const list = PLAYLISTS[category];
-            videoToPlay = typeof list === 'string' ? list : list[Math.floor(Math.random() * list.length)];
+            
+            if (category === "RELAXING") {
+                isRelaxing = true;
+                videoToPlay = "SPECIAL_RELAXING";
+            } else {
+                const list = PLAYLISTS[category];
+                videoToPlay = typeof list === 'string' ? list : list[Math.floor(Math.random() * list.length)];
+            }
         }
 
         console.log(`[${hr}:${min}] 🎬 NOW STREAMING: ${currentlyPlayingCategory}`);
 
-        const ffmpegCmd = `ffmpeg -re -reconnect 1 -reconnect_at_eof 1 -reconnect_streamed 1 -reconnect_delay_max 5 -i "${videoToPlay}" -vf "scale=640:360,setpts=0.98*PTS" -vcodec libx264 -preset ultrafast -tune zerolatency -threads 2 -g 36 -b:v 280k -maxrate 280k -bufsize 2000k -r 18 -acodec aac -af "atempo=1.02" -b:a 128k -f flv "${streamURL}${streamKey}"`;
+        let ffmpegCmd = "";
+        if (isRelaxing) {
+            // Special Command: Muted Video Loop + Audio Loop
+            const relaxData = PLAYLISTS.RELAXING;
+            ffmpegCmd = `ffmpeg -re -stream_loop -1 -i "${relaxData.video}" -stream_loop -1 -i "${relaxData.audio}" -vf "scale=640:360" -c:v libx264 -preset ultrafast -tune zerolatency -threads 2 -g 36 -b:v 280k -maxrate 280k -bufsize 2000k -r 18 -an -c:a aac -b:a 128k -shortest -f flv "${streamURL}${streamKey}"`;
+        } else {
+            // Standard Command with reconnect flags
+            ffmpegCmd = `ffmpeg -re -reconnect 1 -reconnect_at_eof 1 -reconnect_streamed 1 -reconnect_delay_max 5 -i "${videoToPlay}" -vf "scale=640:360,setpts=0.98*PTS" -vcodec libx264 -preset ultrafast -tune zerolatency -threads 2 -g 36 -b:v 280k -maxrate 280k -bufsize 2000k -r 18 -acodec aac -af "atempo=1.02" -b:a 128k -f flv "${streamURL}${streamKey}"`;
+        }
         
         currentProcess = exec(ffmpegCmd);
         isStarting = false;
