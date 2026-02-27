@@ -4,7 +4,7 @@ const fs = require('fs');
 const app = express();
 
 const PORT = process.env.PORT || 10000;
-app.get('/', (req, res) => res.send('Viru TV V55.0: Space & Cube Slots Updated! 🌌🧩⚡'));
+app.get('/', (req, res) => res.send('Viru TV V56.0: Cartoons Added! 👶📺⚡'));
 app.listen(PORT, () => console.log(`Viru TV running on port ${PORT}`));
 
 const streamURL = "rtmp://a.rtmp.youtube.com/live2/";
@@ -40,7 +40,10 @@ const PLAYLISTS = {
         "https://github.com/Viruna2010/VIRU-TV/releases/download/v39.0/videoplayback.1.mp4",
         "https://github.com/Viruna2010/VIRU-TV/releases/download/v40.0/_._.Venerable.Welimada.Saddaseela.Thero.mp4"
     ],
-    CARTOONS: [], 
+    CARTOONS: [
+        "https://github.com/Viruna2010/VIRU-TV/releases/download/v45.0/Pencilmate.Don.t.Waste.Paper.Animation.Cartoons.Pencilmation.-.Pencilmation.Live.360p.h264.mp4",
+        "https://github.com/Viruna2010/VIRU-TV/releases/download/v46.0/Nee-Naw.Nee-Naw.Don.t.Play.with.Fire.+.More.Fire.Truck.Special.Pinkfong.Super.Rescue.Team.-.Pinkfong.Super.Rescue.Team.-.Kids.Songs.Cartoons.360p.h264.mp4"
+    ], 
     COMEDY: [
         "https://github.com/Viruna2010/VIRU-TV/releases/download/v26.0/1.Hour.Extreme.Try.Not.To.Laughing.Compilation.memecompilation.mp4",
         "https://github.com/Viruna2010/VIRU-TV/releases/download/v27.0/1.Hour.Funniest.Animals.2023.Funny.Dog.Videos.Compilation.mp4",
@@ -81,7 +84,7 @@ const getRequiredCategory = (hr) => {
     if (hr >= 12 && hr < 14) return "COMEDY";
     if (hr === 14) return "REVIEWS";
     if (hr === 15) return "KIDS_SONGS";
-    if (hr === 16) return "TRENDING"; 
+    if (hr === 16) return "CARTOONS"; // 4 PM - 5 PM CARTOONS
     if (hr === 17) return "INSTRUMENTAL"; 
     if (hr === 18) return "BANA";
     if (hr === 19) return "TRENDING";
