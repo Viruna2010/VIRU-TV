@@ -41,7 +41,6 @@ const PLAYLISTS = {
         "https://github.com/Viruna2010/VIRU-TV/releases/download/v40.0/_._.Venerable.Welimada.Saddaseela.Thero.mp4"
     ],
     CARTOONS: [
-        "https://github.com/Viruna2010/VIRU-TV/releases/download/v45.0/Pencilmate.Don.t.Waste.Paper.Animation.Cartoons.Pencilmation.-.Pencilmation.Live.360p.h264.mp4",
         "https://github.com/Viruna2010/VIRU-TV/releases/download/v46.0/Nee-Naw.Nee-Naw.Don.t.Play.with.Fire.+.More.Fire.Truck.Special.Pinkfong.Super.Rescue.Team.-.Pinkfong.Super.Rescue.Team.-.Kids.Songs.Cartoons.360p.h264.mp4",
         "https://github.com/Viruna2010/VIRU-TV/releases/download/v47.0/Nee-Naw.Nee-Naw.Fire.Truck.Songs.for.Kids.Pinkfong.Super.Rescue.Team.-.Pinkfong.Super.Rescue.Team.-.Kids.Songs.Cartoons.360p.h264.mp4",
         "https://github.com/Viruna2010/VIRU-TV/releases/download/v48.0/Hogi.and.Dinosaur.s.Colorful.Bike.Race.Colors.Song.15.min.Compilation.Hogi.Colors.Hogi.Pinkfong.-.Hogi.Pinkfong.-.Learn.Play.360p.h264.mp4",
